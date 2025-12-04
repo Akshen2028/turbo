@@ -16,7 +16,7 @@ struct HomeView: View {
                     .fontWeight(.bold)
 
                 NavigationLink("Select Category") {
-                    PlaceholderView(title: "Category Selection")
+                    CategoryListView()
                 }
                 .buttonStyle(.borderedProminent)
 
