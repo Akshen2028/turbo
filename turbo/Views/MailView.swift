@@ -5,21 +5,18 @@
 //  Created by Akshen Jasikumar on 2021-01-07.
 //
 
-import Foundation
 import SwiftUI
-import UIKit
 import MessageUI
 
 struct MailView: UIViewControllerRepresentable {
 
-    @Environment(\.presentationMode) var presentation
+    @Environment(\.presentationMode) private var presentation
     @Binding var result: Result<MFMailComposeResult, Error>?
-    
-    let newSubject : String
-    let newMsgBody : String
+
+    let subject: String
+    let body: String
 
     class Coordinator: NSObject, MFMailComposeViewControllerDelegate {
-
         @Binding var presentation: PresentationMode
         @Binding var result: Result<MFMailComposeResult, Error>?
 
@@ -32,33 +29,32 @@ struct MailView: UIViewControllerRepresentable {
         func mailComposeController(_ controller: MFMailComposeViewController,
                                    didFinishWith result: MFMailComposeResult,
                                    error: Error?) {
-            defer {
-                $presentation.wrappedValue.dismiss()
-            }
-            guard error == nil else {
-                self.result = .failure(error!)
+            defer { presentation.dismiss() }
+
+            if let error = error {
+                self.result = .failure(error)
                 return
             }
+
             self.result = .success(result)
         }
     }
 
     func makeCoordinator() -> Coordinator {
-        return Coordinator(presentation: presentation,
-                           result: $result)
+        Coordinator(
+            presentation: presentation,
+            result: $result
+        )
     }
 
-    func makeUIViewController(context: UIViewControllerRepresentableContext<MailView>) -> MFMailComposeViewController {
+    func makeUIViewController(context: Context) -> MFMailComposeViewController {
         let vc = MFMailComposeViewController()
         vc.mailComposeDelegate = context.coordinator
         vc.setToRecipients(["contact@talkaholic.ca"])
-        vc.setSubject(newSubject)
-        vc.setMessageBody(newMsgBody, isHTML: false)
+        vc.setSubject(subject)
+        vc.setMessageBody(body, isHTML: false)
         return vc
     }
 
-    func updateUIViewController(_ uiViewController: MFMailComposeViewController,
-                                context: UIViewControllerRepresentableContext<MailView>) {
-
-    }
+    func updateUIViewController(_ uiViewController: MFMailComposeViewController, context: Context) {}
 }

@@ -10,12 +10,9 @@ import MessageUI
 
 struct HomeView: View {
 
-    // MARK: - Email State
-    @State private var showMailComposer = false
-    @State private var isSendingFeatureSuggestion = false
-    @State private var mailResult: Result<MFMailComposeResult, Error>? = nil
+    @StateObject private var mailVM = MailViewModel()
 
-    // MARK: - Background Animation
+    // MARK: - Background Animation State
     @State private var isAnimatingBackground = false
     @State private var gradientStart = UnitPoint(x: 0, y: -2)
     @State private var gradientEnd = UnitPoint(x: 4, y: 0)
@@ -39,14 +36,17 @@ struct HomeView: View {
                 bottomButtons
             }
         }
-        // FIXED: Sheet is now attached ONCE, at root level.
-        .sheet(isPresented: $showMailComposer) {
-            mailComposerSheet
+        .sheet(isPresented: $mailVM.isShowingMailComposer) {
+            MailView(
+                result: $mailVM.mailResult,
+                subject: mailVM.subject,
+                body: mailVM.body
+            )
         }
         .accentColor(.black)
     }
 
-    // MARK: - Background Gradient
+    // MARK: - Gradient Background
     private var animatedGradientBackground: some View {
         LinearGradient(
             gradient: Gradient(colors: backgroundGradient),
@@ -56,7 +56,7 @@ struct HomeView: View {
         .ignoresSafeArea()
     }
 
-    // MARK: - Animated Background Bubbles
+    // MARK: - Animated Icons
     private var animatedIconGrid: some View {
         VStack {
             ForEach(0 ..< numberOfRows()) { row in
@@ -84,21 +84,21 @@ struct HomeView: View {
         .onAppear { isAnimatingBackground = true }
     }
 
-    // MARK: - Main Center Content
+    // MARK: - Main Content
     private var mainContent: some View {
         VStack {
             Text("Talkaholic")
                 .font(.system(size: 38, weight: .bold))
                 .foregroundColor(.black)
 
-            // Select Category
             NavigationLink(destination: CategoryListView()) {
                 Text("Select Category")
                     .homePrimaryButton()
             }
 
-            // Send Questions (opens Mail Composer)
-            Button(action: openMailComposerForQuestion) {
+            Button {
+                mailVM.prepareForQuestion()
+            } label: {
                 Text("Send Questions")
                     .homeSecondaryButton(tealColor: tealColor)
             }
@@ -107,7 +107,7 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Bottom Buttons (Info + Help)
+    // MARK: - Bottom Buttons
     private var bottomButtons: some View {
         VStack {
             Spacer()
@@ -119,36 +119,9 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Mail Composer Sheet Content
-    private var mailComposerSheet: some View {
-        MailView(
-            result: $mailResult,
-            newSubject: isSendingFeatureSuggestion
-                ? "New Feature Suggestion"
-                : "New Question Suggestion",
-            newMsgBody: isSendingFeatureSuggestion
-                ? "I am enjoying this app, but I want to suggest a new feature!!!\n\nSuggestion:"
-                : "I am enjoying this app, but I want to send a new Question!!!\n\nCategory: \n\nQuestion: "
-        )
-    }
-
-    // MARK: - Mail Composer Logic
-    private func openMailComposerForQuestion() {
-        isSendingFeatureSuggestion = false
-        attemptToOpenMail()
-    }
-
-    private func attemptToOpenMail() {
-        if MFMailComposeViewController.canSendMail() {
-            showMailComposer = true
-        } else {
-            print("Error: Device cannot send mail.")
-        }
-    }
-
     // MARK: - Helpers
     private func iconName(for index: Int) -> String {
-        String(index % 2)   // uses "0" and "1" bubble assets
+        String(index % 2)
     }
 
     private func numberOfRows() -> Int {
