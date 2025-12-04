@@ -12,7 +12,7 @@ struct CategoryListView: View {
 
     var body: some View {
         List(viewModel.categories) { category in
-            NavigationLink(destination: Text("Selected: \(category.title)")) {
+            NavigationLink(destination: QuestionView(category: category)) {
                 HStack {
                     Image(category.imageName)
                         .resizable()
