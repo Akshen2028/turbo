@@ -10,7 +10,7 @@ import MessageUI
 
 struct HomeView: View {
 
-    // MARK: - Email Sheet State
+    // MARK: - Email State
     @State private var showMailComposer = false
     @State private var isSendingFeatureSuggestion = false
     @State private var mailResult: Result<MFMailComposeResult, Error>? = nil
@@ -29,7 +29,7 @@ struct HomeView: View {
         Color(red: 55/255, green: 213/255, blue: 209/255)
     ]
 
-    // MARK: - View
+    // MARK: - Body
     var body: some View {
         NavigationView {
             ZStack {
@@ -39,6 +39,7 @@ struct HomeView: View {
                 bottomButtons
             }
         }
+        // FIXED: Sheet is now attached ONCE, at root level.
         .sheet(isPresented: $showMailComposer) {
             mailComposerSheet
         }
@@ -55,7 +56,7 @@ struct HomeView: View {
         .ignoresSafeArea()
     }
 
-    // MARK: - Animated Icons Behind UI
+    // MARK: - Animated Background Bubbles
     private var animatedIconGrid: some View {
         VStack {
             ForEach(0 ..< numberOfRows()) { row in
@@ -80,29 +81,26 @@ struct HomeView: View {
                 }
             }
         }
-        .onAppear {
-            isAnimatingBackground = true
-        }
+        .onAppear { isAnimatingBackground = true }
     }
 
-    // MARK: - Main App UI (Title + Buttons)
+    // MARK: - Main Center Content
     private var mainContent: some View {
         VStack {
             Text("Talkaholic")
                 .font(.system(size: 38, weight: .bold))
                 .foregroundColor(.black)
 
+            // Select Category
             NavigationLink(destination: CategoryListView()) {
                 Text("Select Category")
                     .homePrimaryButton()
             }
 
+            // Send Questions (opens Mail Composer)
             Button(action: openMailComposerForQuestion) {
                 Text("Send Questions")
                     .homeSecondaryButton(tealColor: tealColor)
-            }
-            .sheet(isPresented: $showMailComposer) {
-                mailComposerSheet
             }
 
             Spacer().frame(height: 200)
@@ -121,7 +119,7 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Mail Composer View
+    // MARK: - Mail Composer Sheet Content
     private var mailComposerSheet: some View {
         MailView(
             result: $mailResult,
@@ -134,7 +132,7 @@ struct HomeView: View {
         )
     }
 
-    // MARK: - Actions
+    // MARK: - Mail Composer Logic
     private func openMailComposerForQuestion() {
         isSendingFeatureSuggestion = false
         attemptToOpenMail()
@@ -150,7 +148,7 @@ struct HomeView: View {
 
     // MARK: - Helpers
     private func iconName(for index: Int) -> String {
-        String(index % 2) // uses "0" and "1" image assets
+        String(index % 2)   // uses "0" and "1" bubble assets
     }
 
     private func numberOfRows() -> Int {
