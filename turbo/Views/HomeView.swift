@@ -6,70 +6,62 @@
 //
 
 import SwiftUI
-import UIKit
 import MessageUI
 
 struct HomeView: View {
-    
-    // MARK: - State Properties
-    @State private var navigateTo = ""
-    @State private var isActives = false
-    @State private var isActive = false
-    @State private var isActive1 = false
-    @State private var show = false
-    @State private var sug = false
-    @State private var showSheet = false
-    @State private var result: Result<MFMailComposeResult, Error>? = nil
-    
-    @State private var isAnimating = false
-    @State private var start = UnitPoint(x: 0, y: -2)
-    @State private var end = UnitPoint(x: 4, y: 0)
-    
-    @Environment(\.colorScheme) var colorScheme
-    
+
+    // MARK: - Email Sheet State
+    @State private var showMailComposer = false
+    @State private var isSendingFeatureSuggestion = false
+    @State private var mailResult: Result<MFMailComposeResult, Error>? = nil
+
+    // MARK: - Background Animation
+    @State private var isAnimatingBackground = false
+    @State private var gradientStart = UnitPoint(x: 0, y: -2)
+    @State private var gradientEnd = UnitPoint(x: 4, y: 0)
+
     // MARK: - Constants
-    let itemsPerRow = 6
-    let colors = [
+    private let itemsPerRow = 6
+    private let tealColor = Color(red: 55/255, green: 213/255, blue: 209/255)
+    private let backgroundGradient = [
         Color.white,
         Color.white,
         Color(red: 55/255, green: 213/255, blue: 209/255)
     ]
-    
-    
-    // MARK: - Body
+
+    // MARK: - View
     var body: some View {
         NavigationView {
             ZStack {
-                
-                // Background Gradient Animation
-                LinearGradient(
-                    gradient: Gradient(colors: colors),
-                    startPoint: start,
-                    endPoint: end
-                )
-                .ignoresSafeArea()
-                
-                // Animated Background Icons
-                animatedBackgroundIcons
-                
-                // Main Header + Buttons
-                mainButtons
-                
-                // Bottom About/Help Buttons
+                animatedGradientBackground
+                animatedIconGrid
+                mainContent
                 bottomButtons
             }
         }
+        .sheet(isPresented: $showMailComposer) {
+            mailComposerSheet
+        }
         .accentColor(.black)
     }
-    
-    
-    // MARK: - Background Icons
-    private var animatedBackgroundIcons: some View {
+
+    // MARK: - Background Gradient
+    private var animatedGradientBackground: some View {
+        LinearGradient(
+            gradient: Gradient(colors: backgroundGradient),
+            startPoint: gradientStart,
+            endPoint: gradientEnd
+        )
+        .ignoresSafeArea()
+    }
+
+    // MARK: - Animated Icons Behind UI
+    private var animatedIconGrid: some View {
         VStack {
-            ForEach(0 ..< getNumberOfRows()) { row in
+            ForEach(0 ..< numberOfRows()) { row in
                 HStack {
                     ForEach(0 ..< itemsPerRow) { col in
-                        Image(getImage(indexLocation: (row * itemsPerRow) + col))
+                        Image(iconName(for: row * itemsPerRow + col))
                             .resizable()
                             .scaledToFit()
                             .padding()
@@ -77,132 +69,93 @@ struct HomeView: View {
                                 width: UIScreen.main.bounds.width / CGFloat(itemsPerRow),
                                 height: UIScreen.main.bounds.width / CGFloat(itemsPerRow)
                             )
-                            .opacity(isAnimating ? 0.5 : 0)
+                            .opacity(isAnimatingBackground ? 0.5 : 0)
                             .animation(
                                 Animation.linear(duration: Double.random(in: 10...20))
                                     .repeatForever(autoreverses: true)
                                     .delay(Double.random(in: 0...5)),
-                                value: isAnimating
+                                value: isAnimatingBackground
                             )
                     }
                 }
             }
         }
         .onAppear {
-            isAnimating = true
+            isAnimatingBackground = true
         }
     }
-    
-    
-    // MARK: - Main Buttons & Title
-    private var mainButtons: some View {
+
+    // MARK: - Main App UI (Title + Buttons)
+    private var mainContent: some View {
         VStack {
             Text("Talkaholic")
                 .font(.system(size: 38, weight: .bold))
                 .foregroundColor(.black)
-            
-            // Select Category
+
             NavigationLink(destination: CategoryListView()) {
                 Text("Select Category")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(20)
+                    .homePrimaryButton()
             }
-            .background(Color(red: 55/255, green: 213/255, blue: 209/255))
-            .cornerRadius(80)
-            .shadow(radius: 10)
-            
-            // Send Questions
-            Button(action: {
-                suggestFeature()
-                sug = false
-            }) {
+
+            Button(action: openMailComposerForQuestion) {
                 Text("Send Questions")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(Color(red: 55/255, green: 213/255, blue: 209/255))
-                    .padding(20)
+                    .homeSecondaryButton(tealColor: tealColor)
             }
-            .background(Color.white)
-            .cornerRadius(80)
-            .shadow(radius: 10)
-            .padding(.top, 4)
-            .sheet(isPresented: $showSheet) {
-                if sug {
-                    MailView(
-                        result: $result,
-                        newSubject: "New Feature Suggestion",
-                        newMsgBody: "I am enjoying this app, but I want to suggest a new feature!!!\n\nSuggestion:"
-                    )
-                } else {
-                    MailView(
-                        result: $result,
-                        newSubject: "New Question Suggestion",
-                        newMsgBody: "I am enjoying this app, but I want to send a new Question!!!\n\nCategory: \n\nQuestion: "
-                    )
-                }
+            .sheet(isPresented: $showMailComposer) {
+                mailComposerSheet
             }
-            
+
             Spacer().frame(height: 200)
         }
     }
-    
-    
-    // MARK: - Bottom Info & Help Buttons
+
+    // MARK: - Bottom Buttons (Info + Help)
     private var bottomButtons: some View {
         VStack {
             Spacer()
-            
-            HStack {
-                
-                NavigationLink(destination: AboutView()) {
-                    Image(systemName: "info.circle.fill")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 40)
-                        .padding(-7)
-                        .background(Color.white)
-                        .padding(13)
-                        .cornerRadius(20)
-                        .shadow(radius: 12)
-                        .foregroundColor(Color(red: 55/255, green: 213/255, blue: 209/255))
-                }
-                
-                NavigationLink(destination: HelpView()) {
-                    Image(systemName: "questionmark.circle.fill")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 40)
-                        .padding(-7)
-                        .background(Color(red: 55/255, green: 213/255, blue: 209/255))
-                        .padding(13)
-                        .cornerRadius(20)
-                        .shadow(radius: 12)
-                        .foregroundColor(.white)
-                }
+            HStack() {
+                InfoNavButton()
+                HelpNavButton()
             }
-            
             Spacer().frame(height: 200)
         }
     }
-    
-    
-    // MARK: - Helper Functions
-    func getImage(indexLocation: Int) -> String {
-        return String(indexLocation % 2)
+
+    // MARK: - Mail Composer View
+    private var mailComposerSheet: some View {
+        MailView(
+            result: $mailResult,
+            newSubject: isSendingFeatureSuggestion
+                ? "New Feature Suggestion"
+                : "New Question Suggestion",
+            newMsgBody: isSendingFeatureSuggestion
+                ? "I am enjoying this app, but I want to suggest a new feature!!!\n\nSuggestion:"
+                : "I am enjoying this app, but I want to send a new Question!!!\n\nCategory: \n\nQuestion: "
+        )
     }
-    
-    func getNumberOfRows() -> Int {
-        let heightPerItem = UIScreen.main.bounds.width / CGFloat(itemsPerRow)
-        return Int(UIScreen.main.bounds.height / heightPerItem) + 1
+
+    // MARK: - Actions
+    private func openMailComposerForQuestion() {
+        isSendingFeatureSuggestion = false
+        attemptToOpenMail()
     }
-    
-    func suggestFeature() {
-        print("Hurray! New Suggestion")
+
+    private func attemptToOpenMail() {
         if MFMailComposeViewController.canSendMail() {
-            showSheet = true
+            showMailComposer = true
         } else {
-            print("Error sending mail")
+            print("Error: Device cannot send mail.")
         }
+    }
+
+    // MARK: - Helpers
+    private func iconName(for index: Int) -> String {
+        String(index % 2) // uses "0" and "1" image assets
+    }
+
+    private func numberOfRows() -> Int {
+        let cellHeight = UIScreen.main.bounds.width / CGFloat(itemsPerRow)
+        return Int(UIScreen.main.bounds.height / cellHeight) + 1
     }
 }
 
