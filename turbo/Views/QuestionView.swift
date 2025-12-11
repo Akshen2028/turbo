@@ -46,6 +46,12 @@ struct QuestionView: View {
         guard currentIndex < viewModel.cards.count else { return "" }
         return viewModel.cards[currentIndex].q
     }
+    
+    private var isStarterCard: Bool {
+        let currentIndex = viewModel.swipedCount
+        guard currentIndex < viewModel.cards.count else { return false }
+        return viewModel.cards[currentIndex].q == "Swipe left for a question..."
+    }
 
     var body: some View {
         ZStack {
@@ -170,12 +176,14 @@ struct QuestionView: View {
         .navigationTitle(category.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    showingSaveSheet = true
-                }) {
-                    Image(systemName: "bookmark")
-                        .foregroundColor(Color(red: 55/255, green: 213/255, blue: 209/255))
+            if !isStarterCard {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        showingSaveSheet = true
+                    }) {
+                        Image(systemName: "bookmark")
+                            .foregroundColor(Color(red: 55/255, green: 213/255, blue: 209/255))
+                    }
                 }
             }
         }
