@@ -121,11 +121,32 @@ class QuestionViewModel: ObservableObject {
     // MARK: - Drag handling (onChanged / onEnd from old Home)
 
     func onChanged(value: DragGesture.Value, index: Int) {
-        // Allow both left and right swipe
-        cards[index].offset = value.translation.width
+        let isFirst = swipedCount == 0
+        let isLast = swipedCount == cards.count - 1
+        let translation = value.translation.width
+
+        // Block swiping right on first card or left on last card
+        if (isFirst && translation > 0) || (isLast && translation < 0) {
+            cards[index].offset = 0
+            return
+        }
+
+        cards[index].offset = translation
     }
 
     func onEnd(value: DragGesture.Value, index: Int) {
+        let isFirst = swipedCount == 0
+        let isLast = swipedCount == cards.count - 1
+        let translation = value.translation.width
+
+        // If swipe is blocked at the edges, snap back
+        if (isFirst && translation > 0) || (isLast && translation < 0) {
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
+                cards[index].offset = 0
+            }
+            return
+        }
+
         if abs(value.translation.width) > width / 3 {
             // Update asynchronously to avoid blocking gesture recognition
             Task { @MainActor in
