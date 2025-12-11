@@ -6,11 +6,15 @@
 //
 
 import SwiftUI
+import CoreData
 
 struct QuestionView: View {
-
+    
     let category: Category
     @StateObject private var viewModel: QuestionViewModel
+    @Environment(\.managedObjectContext) private var viewContext
+    @StateObject private var categoryService = CustomCategoryService(context: PersistenceController.shared.container.viewContext)
+    @State private var showingSaveSheet = false
 
     // Background animation state
     private let itemsPerRow = 6
@@ -35,6 +39,12 @@ struct QuestionView: View {
             .font: UIFont.systemFont(ofSize: 24, weight: .bold),
             .foregroundColor: UIColor.black
         ]
+    }
+    
+    private var currentQuestion: String {
+        let currentIndex = viewModel.swipedCount
+        guard currentIndex < viewModel.cards.count else { return "" }
+        return viewModel.cards[currentIndex].q
     }
 
     var body: some View {
@@ -159,6 +169,23 @@ struct QuestionView: View {
         }
         .navigationTitle(category.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    showingSaveSheet = true
+                }) {
+                    Image(systemName: "bookmark")
+                        .foregroundColor(Color(red: 55/255, green: 213/255, blue: 209/255))
+                }
+            }
+        }
+        .sheet(isPresented: $showingSaveSheet) {
+            SaveQuestionView(
+                question: currentQuestion,
+                categoryService: categoryService,
+                isPresented: $showingSaveSheet
+            )
+        }
     }
 
     // MARK: - Bubble Background

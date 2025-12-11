@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Combine
+import CoreData
 
 @MainActor
 class QuestionViewModel: ObservableObject {
@@ -34,25 +35,59 @@ class QuestionViewModel: ObservableObject {
         let starter = Card(q: "Swipe left for a question...")
 
         let categoryCards: [Card]
-        switch category.id {
-        case 0: // Family
-            categoryCards = QuestionData.familyQuestions.shuffled().map { Card(q: $0) }
-        case 1: // Relationships
-            categoryCards = QuestionData.relationshipQuestions.shuffled().map { Card(q: $0) }
-        case 2: // Friends
-            categoryCards = QuestionData.friendQuestions.shuffled().map { Card(q: $0) }
-        case 3: // Icebreakers
-            categoryCards = QuestionData.icebreakerQuestions.shuffled().map { Card(q: $0) }
-        case 4: // Random
-            categoryCards = QuestionData.randomQuestions.shuffled().map { Card(q: $0) }
-        case 5: // Controversial
-            categoryCards = QuestionData.controversialQuestions.shuffled().map { Card(q: $0) }
-        default:
-            categoryCards = []
+        
+        // Check if this is a custom category
+        if category.isCustom, let customCategoryId = category.customCategoryId {
+            // Load from custom category
+            categoryCards = loadCustomCategoryQuestions(categoryId: customCategoryId)
+        } else {
+            // Load from regular categories
+            switch category.id {
+            case 0: // Family
+                categoryCards = QuestionData.familyQuestions.shuffled().map { Card(q: $0) }
+            case 1: // Relationships
+                categoryCards = QuestionData.relationshipQuestions.shuffled().map { Card(q: $0) }
+            case 2: // Friends
+                categoryCards = QuestionData.friendQuestions.shuffled().map { Card(q: $0) }
+            case 3: // Icebreakers
+                categoryCards = QuestionData.icebreakerQuestions.shuffled().map { Card(q: $0) }
+            case 4: // Random
+                categoryCards = QuestionData.randomQuestions.shuffled().map { Card(q: $0) }
+            case 5: // Controversial
+                categoryCards = QuestionData.controversialQuestions.shuffled().map { Card(q: $0) }
+            default:
+                categoryCards = []
+            }
         }
 
         // Keep starter card at the bottom of the stack
         cards = [starter] + categoryCards
+    }
+    
+    private func loadCustomCategoryQuestions(categoryId: UUID) -> [Card] {
+        let context = PersistenceController.shared.container.viewContext
+        let request: NSFetchRequest<CustomCategoryEntity> = CustomCategoryEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", categoryId as CVarArg)
+        
+        do {
+            if let categoryEntity = try context.fetch(request).first {
+                // Access questions through the relationship using KVC
+                if let questionsSet = categoryEntity.value(forKey: "questions") as? NSSet,
+                   let questions = questionsSet.allObjects as? [NSManagedObject] {
+                    return questions.compactMap { entity in
+                        // Use KVC to access the question property
+                        if let question = entity.value(forKey: "question") as? String {
+                            return Card(q: question)
+                        }
+                        return nil
+                    }
+                }
+            }
+        } catch {
+            print("Failed to load custom category questions: \(error)")
+        }
+        
+        return []
     }
 
     // MARK: - Navigation
