@@ -11,7 +11,7 @@ struct SaveQuestionView: View {
     let question: String
     @ObservedObject var categoryService: CustomCategoryService
     @Binding var isPresented: Bool
-    @State private var selectedCategoryId: UUID?
+    @State private var selectedCategoryIds: Set<UUID> = []
     @State private var showingCreateCategory = false
     @State private var saveSuccess = false
     
@@ -55,7 +55,7 @@ struct SaveQuestionView: View {
                     ScrollView {
                         ForEach(categoryService.customCategories) { category in
                             let isAlreadySaved = isQuestionAlreadySaved(in: category.id)
-                            let isSelected = selectedCategoryId == category.id
+                            let isSelected = selectedCategoryIds.contains(category.id)
                             
                             CategorySelectionRow(
                                 category: category,
@@ -66,23 +66,34 @@ struct SaveQuestionView: View {
                                     // Unsave the question
                                     if categoryService.unsaveQuestion(question, from: category.id) {
                                         // Question was unsaved, refresh the view
-                                        selectedCategoryId = nil
+                                        selectedCategoryIds.remove(category.id)
                                     }
                                 } else {
-                                    // Select to save
-                                    selectedCategoryId = category.id
+                                    // Toggle selection
+                                    if isSelected {
+                                        selectedCategoryIds.remove(category.id)
+                                    } else {
+                                        selectedCategoryIds.insert(category.id)
+                                    }
                                 }
                             }
                         }
                     }
                     
-                    PrimaryActionButton("Save", isEnabled: selectedCategoryId != nil) {
-                        if let categoryId = selectedCategoryId {
-                            if categoryService.saveQuestion(question, to: categoryId) {
-                                saveSuccess = true
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                    isPresented = false
+                    PrimaryActionButton("Save", isEnabled: !selectedCategoryIds.isEmpty) {
+                        let categoriesToSave = selectedCategoryIds
+                        var anySaved = false
+                        for id in categoriesToSave {
+                            if !isQuestionAlreadySaved(in: id) {
+                                if categoryService.saveQuestion(question, to: id) {
+                                    anySaved = true
                                 }
+                            }
+                        }
+                        if anySaved {
+                            saveSuccess = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                isPresented = false
                             }
                         }
                     }
