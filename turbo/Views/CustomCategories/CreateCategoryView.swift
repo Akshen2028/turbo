@@ -13,7 +13,7 @@ struct CreateCategoryView: View {
     @State private var categoryName = ""
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 20) {
                 Text("Create New Category")
                     .font(.title2)

@@ -32,7 +32,7 @@ struct CategoryListView: View {
 }
 
 #Preview {
-    NavigationView {
+    NavigationStack {
         CategoryListView()
     }
 }

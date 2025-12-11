@@ -20,7 +20,7 @@ struct SaveQuestionView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 20) {
                 // Question preview
                 VStack(alignment: .leading, spacing: 12) {
