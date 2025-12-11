@@ -107,6 +107,28 @@ class CustomCategoryService: ObservableObject {
         }
     }
     
+    // MARK: - Check if Question Exists
+    
+    func questionExists(_ question: String, in categoryId: UUID) -> Bool {
+        let categoryRequest: NSFetchRequest<CustomCategoryEntity> = CustomCategoryEntity.fetchRequest()
+        categoryRequest.predicate = NSPredicate(format: "id == %@", categoryId as CVarArg)
+        
+        do {
+            guard let categoryEntity = try context.fetch(categoryRequest).first else {
+                return false
+            }
+            
+            let checkRequest: NSFetchRequest<SavedQuestionEntity> = SavedQuestionEntity.fetchRequest()
+            checkRequest.predicate = NSPredicate(format: "category == %@", categoryEntity)
+            
+            let existingQuestions = try context.fetch(checkRequest)
+            return existingQuestions.contains(where: { ($0.value(forKey: "question") as? String) == question })
+        } catch {
+            print("Failed to check if question exists: \(error)")
+            return false
+        }
+    }
+    
     // MARK: - Save Question
     
     func saveQuestion(_ question: String, to categoryId: UUID) -> Bool {
@@ -161,6 +183,35 @@ class CustomCategoryService: ObservableObject {
             }
         } catch {
             print("Failed to delete question: \(error)")
+        }
+    }
+    
+    // MARK: - Unsave Question (delete by question text)
+    
+    func unsaveQuestion(_ question: String, from categoryId: UUID) -> Bool {
+        let categoryRequest: NSFetchRequest<CustomCategoryEntity> = CustomCategoryEntity.fetchRequest()
+        categoryRequest.predicate = NSPredicate(format: "id == %@", categoryId as CVarArg)
+        
+        do {
+            guard let categoryEntity = try context.fetch(categoryRequest).first else {
+                return false
+            }
+            
+            // Find the question by text in this category
+            let questionRequest: NSFetchRequest<SavedQuestionEntity> = SavedQuestionEntity.fetchRequest()
+            questionRequest.predicate = NSPredicate(format: "category == %@", categoryEntity)
+            
+            let questions = try context.fetch(questionRequest)
+            if let questionEntity = questions.first(where: { ($0.value(forKey: "question") as? String) == question }) {
+                context.delete(questionEntity)
+                try context.save()
+                loadCategories()
+                return true
+            }
+            return false
+        } catch {
+            print("Failed to unsave question: \(error)")
+            return false
         }
     }
 }

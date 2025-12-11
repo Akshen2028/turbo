@@ -15,6 +15,10 @@ struct SaveQuestionView: View {
     @State private var showingCreateCategory = false
     @State private var saveSuccess = false
     
+    private func isQuestionAlreadySaved(in categoryId: UUID) -> Bool {
+        categoryService.questionExists(question, in: categoryId)
+    }
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
@@ -63,17 +67,36 @@ struct SaveQuestionView: View {
                 } else {
                     ScrollView {
                         ForEach(categoryService.customCategories) { category in
+                            let isAlreadySaved = isQuestionAlreadySaved(in: category.id)
+                            let isSelected = selectedCategoryId == category.id
+                            
                             Button(action: {
-                                selectedCategoryId = category.id
+                                if isAlreadySaved {
+                                    // Unsave the question
+                                    if categoryService.unsaveQuestion(question, from: category.id) {
+                                        // Question was unsaved, refresh the view
+                                        selectedCategoryId = nil
+                                    }
+                                } else {
+                                    // Select to save
+                                    selectedCategoryId = category.id
+                                }
                             }) {
                                 HStack {
-                                    Image(systemName: selectedCategoryId == category.id ? "checkmark.circle.fill" : "circle")
-                                        .foregroundColor(selectedCategoryId == category.id ? Color(red: 55/255, green: 213/255, blue: 209/255) : .gray)
+                                    Image(systemName: isAlreadySaved || isSelected ? "checkmark.circle.fill" : "circle")
+                                        .foregroundColor(isAlreadySaved ? .green : (isSelected ? Color(red: 55/255, green: 213/255, blue: 209/255) : .gray))
                                     
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text(category.name)
-                                            .font(.headline)
-                                            .foregroundColor(.black)
+                                        HStack {
+                                            Text(category.name)
+                                                .font(.headline)
+                                                .foregroundColor(.black)
+                                            if isAlreadySaved {
+                                                Text("(Tap to unsave)")
+                                                    .font(.caption)
+                                                    .foregroundColor(.green)
+                                            }
+                                        }
                                         Text("\(category.questions.count) question\(category.questions.count == 1 ? "" : "s")")
                                             .font(.subheadline)
                                             .foregroundColor(.gray)
@@ -82,7 +105,7 @@ struct SaveQuestionView: View {
                                     Spacer()
                                 }
                                 .padding()
-                                .background(selectedCategoryId == category.id ? Color(red: 55/255, green: 213/255, blue: 209/255).opacity(0.1) : Color.gray.opacity(0.05))
+                                .background(isAlreadySaved ? Color.green.opacity(0.1) : (isSelected ? Color(red: 55/255, green: 213/255, blue: 209/255).opacity(0.1) : Color.gray.opacity(0.05)))
                                 .cornerRadius(12)
                             }
                             .padding(.horizontal)
