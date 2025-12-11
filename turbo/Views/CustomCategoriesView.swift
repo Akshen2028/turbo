@@ -15,21 +15,20 @@ struct CustomCategoriesView: View {
     @State private var newCategoryName = ""
     
     var body: some View {
-        NavigationView {
-            ZStack {
-                // Gradient background
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color.white,
-                        Color.white,
-                        Color(red: 55/255, green: 213/255, blue: 209/255)
-                    ]),
-                    startPoint: UnitPoint(x: 0, y: -2),
-                    endPoint: UnitPoint(x: 4, y: 0)
-                )
-                .ignoresSafeArea()
-                
-                VStack {
+        ZStack {
+            // Gradient background
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color.white,
+                    Color.white,
+                    Color(red: 55/255, green: 213/255, blue: 209/255)
+                ]),
+                startPoint: UnitPoint(x: 0, y: -2),
+                endPoint: UnitPoint(x: 4, y: 0)
+            )
+            .ignoresSafeArea()
+            
+            VStack {
                     if categoryService.customCategories.isEmpty {
                         VStack(spacing: 20) {
                             Image(systemName: "folder.badge.plus")
@@ -104,10 +103,9 @@ struct CustomCategoriesView: View {
                     .padding()
                 }
             }
-            .navigationTitle("My Categories")
-            .sheet(isPresented: $showingCreateCategory) {
-                CreateCategoryView(categoryService: categoryService, isPresented: $showingCreateCategory)
-            }
+        .navigationTitle("My Categories")
+        .sheet(isPresented: $showingCreateCategory) {
+            CreateCategoryView(categoryService: categoryService, isPresented: $showingCreateCategory)
         }
     }
 }
