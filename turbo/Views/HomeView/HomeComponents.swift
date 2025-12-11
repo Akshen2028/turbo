@@ -71,3 +71,23 @@ struct HelpNavButton: View {
     }
 }
 
+// MARK: - Mail Button (White background, Teal icon)
+struct MailNavButton: View {
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "envelope.fill")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 40)
+                .padding(3)
+                .background(Color.white)
+                .cornerRadius(8)
+                .padding(8)
+                .shadow(radius: 12)
+                .foregroundColor(Color(red: 55/255, green: 213/255, blue: 209/255))
+        }
+    }
+}
+

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import MessageUI
+import CoreData
 
 struct HomeView: View {
     @StateObject private var mailVM = MailViewModel()
@@ -95,10 +96,8 @@ struct HomeView: View {
                     .homePrimaryButton()
             }
             
-            Button {
-                mailVM.prepareForQuestion()
-            } label: {
-                Text("Send Questions")
+            NavigationLink(destination: CustomCategoriesView()) {
+                Text("My Categories")
                     .homeSecondaryButton(tealColor: tealColor)
             }
             
@@ -110,9 +109,12 @@ struct HomeView: View {
     private var bottomButtons: some View {
         VStack {
             Spacer()
-            HStack() {
+            HStack(spacing: 20) {
                 InfoNavButton()
                 HelpNavButton()
+                MailNavButton {
+                    mailVM.prepareForQuestion()
+                }
             }
             Spacer().frame(height: 200)
         }
