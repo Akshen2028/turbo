@@ -29,6 +29,12 @@ struct QuestionView: View {
     init(category: Category) {
         self.category = category
         _viewModel = StateObject(wrappedValue: QuestionViewModel(category: category))
+        
+        // Make navigation bar title bigger
+        UINavigationBar.appearance().titleTextAttributes = [
+            .font: UIFont.systemFont(ofSize: 24, weight: .bold),
+            .foregroundColor: UIColor.black
+        ]
     }
 
     var body: some View {
