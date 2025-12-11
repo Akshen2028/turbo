@@ -13,8 +13,7 @@ extension View {
         self
             .font(.system(size: 22, weight: .semibold))
             .foregroundColor(.white)
-            .padding(.vertical, 20)
-            .padding(.horizontal, 40)
+            .frame(width: 250, height: 65)
             .background(
                 Color(red: 55/255, green: 213/255, blue: 209/255)
             )
@@ -29,8 +28,7 @@ extension View {
         self
             .font(.system(size: 22, weight: .semibold))
             .foregroundColor(tealColor)
-            .padding(.vertical, 20)
-            .padding(.horizontal, 40)
+            .frame(width: 250, height: 65)
             .background(Color.white)
             .cornerRadius(40)
             .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 4)
