@@ -30,7 +30,15 @@ struct CustomCategoriesView: View {
                         Spacer()
                         ForEach(categoryService.customCategories) { category in
                             NavigationLink {
-                                CustomCategoryDetailView(category: category, categoryService: categoryService)
+                                QuestionView(
+                                    category: Category(
+                                        id: -1,
+                                        name: category.name,
+                                        imageName: "folder.fill",
+                                        isCustom: true,
+                                        customCategoryId: category.id
+                                    )
+                                )
                             } label: {
                                 CustomCategoryRow(category: category)
                             }

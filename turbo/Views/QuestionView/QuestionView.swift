@@ -126,6 +126,23 @@ struct QuestionView: View {
                         viewModel.goToNext()
                     }
                 }
+                
+                // Edit button for custom categories (jump to category detail to manage/delete)
+                if let customCategory = categoryService.customCategories.first(where: { $0.id == category.customCategoryId }) {
+                    NavigationLink {
+                        CustomCategoryDetailView(category: customCategory, categoryService: categoryService)
+                    } label: {
+                        Image(systemName: "pencil.circle.fill")
+                            .font(.system(size: 56, weight: .bold))
+                            .foregroundColor(.white)
+                            .background(
+                                Circle()
+                                    .fill(Color(red: 55/255, green: 213/255, blue: 209/255))
+                                    .frame(width: 48, height: 48)
+                            )
+                            .padding(.top, 30)
+                    }
+                }
 
                 Spacer()
                 Spacer()
