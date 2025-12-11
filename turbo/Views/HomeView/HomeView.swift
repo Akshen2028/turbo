@@ -122,7 +122,10 @@ struct HomeView: View {
     
     // MARK: - Helpers
     private func iconName(for index: Int) -> String {
-        String(index % 2)
+        let baseIcons = ["0", "1"]
+        let categoryIcons = ["family", "friends", "rose", "ice", "balance", "dices"]
+        let allIcons = baseIcons + categoryIcons
+        return allIcons[index % allIcons.count]
     }
     
     private func numberOfRows() -> Int {
