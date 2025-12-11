@@ -8,6 +8,10 @@
 import SwiftUI
 
 struct AboutView: View {
+    @State var start = UnitPoint(x: 0, y: -2)
+    @State var end = UnitPoint(x: 4, y: 0)
+    let colors = [Color.white, Color.white,(Color(red: 90/255, green: 200/255, blue: 190/255))]
+    
     init() {
             //Use this if NavigationBarTitle is with Large Font
             UINavigationBar.appearance().largeTitleTextAttributes = [.foregroundColor: UIColor.black]
@@ -15,9 +19,6 @@ struct AboutView: View {
             //Use this if NavigationBarTitle is with displayMode = .inline
             UINavigationBar.appearance().titleTextAttributes = [.foregroundColor: UIColor.black]
     }
-    @State var start = UnitPoint(x: 0, y: -2)
-    @State var end = UnitPoint(x: 4, y: 0)
-    let colors = [Color.white, Color.white,(Color(red: 90/255, green: 200/255, blue: 190/255))]
     var body : some View{
         ZStack{
             LinearGradient(gradient: Gradient(colors: colors), startPoint: start, endPoint: end).ignoresSafeArea()
