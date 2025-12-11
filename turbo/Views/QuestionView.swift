@@ -51,62 +51,98 @@ struct QuestionView: View {
                 Spacer()
                 Spacer()
 
-                // Card stack - matching old pattern exactly
+                // Card stack - use stable IDs to prevent view recreation
                 ZStack {
                     if !viewModel.cards.isEmpty {
-                        ForEach((0...(viewModel.cards.count - 1)).reversed(), id: \.self) { index in
-                            if index == viewModel.cards.count - 1 {
-                                // Show starter card with "Click Reset" message - not swipeable
-                                ZStack {
-                                    CardView(card: viewModel.cards[index], animation: animation)
-                                        .frame(width: viewModel.cardWidth(), height: viewModel.cardHeight(for: 0))
-                                    VStack {
-                                        Text("").padding(.bottom, 330)
-                                        HStack {
-                                            Text("").padding(.trailing, 150)
-                                            Text("Click Reset").fontWeight(.bold).foregroundColor(Color.gray)
-                                        }
-                                    }
-                                }
-                            } else {
-                                // Regular card - swipeable
-                                HStack {
-                                    Spacer()
-                                    CardView(card: viewModel.cards[index], animation: animation)
-                                        .frame(width: viewModel.cardWidth(), height: viewModel.cardHeight(for: index))
-                                        .rotationEffect(.init(degrees: viewModel.cardRotation(for: index)))
-                                    Spacer(minLength: 0)
-                                }
-                                .frame(height: 400)
-                                .contentShape(Rectangle())
-                                .offset(x: viewModel.cards[index].offset)
-                                .gesture(DragGesture(minimumDistance: 0)
-                                    .onChanged({ (value) in
-                                        viewModel.onChanged(value: value, index: index)
-                                    }).onEnded({ (value) in
-                                        viewModel.onEnd(value: value, index: index)
-                                    }))
+                        let currentIndex = viewModel.swipedCount
+                        let currentCardOffset = viewModel.cards[currentIndex].offset
+                        
+                        // Show preview card when swiping
+                        // Next card preview (when swiping left)
+                        if currentIndex + 1 < viewModel.cards.count && currentCardOffset < 0 {
+                            HStack {
+                                Spacer()
+                                CardView(card: viewModel.cards[currentIndex + 1], animation: animation)
+                                    .frame(width: viewModel.cardWidth(), height: viewModel.cardHeight(for: currentIndex + 1))
+                                Spacer(minLength: 0)
                             }
+                            .frame(height: 400)
+                            .zIndex(Double(viewModel.cards.count - currentIndex) - 0.5)
+                        }
+                        
+                        // Previous card preview (when swiping right)
+                        if currentIndex > 0 && currentCardOffset > 0 {
+                            HStack {
+                                Spacer()
+                                CardView(card: viewModel.cards[currentIndex - 1], animation: animation)
+                                    .frame(width: viewModel.cardWidth(), height: viewModel.cardHeight(for: currentIndex - 1))
+                                Spacer(minLength: 0)
+                            }
+                            .frame(height: 400)
+                            .zIndex(Double(viewModel.cards.count - currentIndex) - 0.5)
+                        }
+                        
+                        // Use card IDs instead of indices for stable view identity
+                        ForEach((currentIndex...(viewModel.cards.count - 1)).reversed(), id: \.self) { index in
+                            let isTopCard = index == currentIndex
+                            HStack {
+                                Spacer()
+                                CardView(card: viewModel.cards[index], animation: animation)
+                                    .frame(width: viewModel.cardWidth(), height: viewModel.cardHeight(for: index))
+                                    .rotationEffect(.init(degrees: isTopCard ? viewModel.cardRotation(for: index) : 0))
+                                Spacer(minLength: 0)
+                            }
+                            .frame(height: 400)
+                            .contentShape(Rectangle())
+                            .offset(x: isTopCard ? viewModel.cards[index].offset : 0)
+                            .zIndex(isTopCard ? Double(viewModel.cards.count - currentIndex) : Double(viewModel.cards.count - index))
+                            .id("card-\(viewModel.cards[index].id)") // Stable ID based on card
+                            .gesture(isTopCard ? DragGesture(minimumDistance: 0)
+                                .onChanged({ (value) in
+                                    viewModel.onChanged(value: value, index: index)
+                                }).onEnded({ (value) in
+                                    viewModel.onEnd(value: value, index: index)
+                                }) : nil)
                         }
                     }
+                }
+                .transaction { transaction in
+                    transaction.animation = .easeOut(duration: 0.15)
                 }
                 .padding(.top, 25)
                 .padding(.horizontal, 30)
 
                 Spacer()
 
-                // Reset button (same style as old app)
-                Button(action: {
-                    viewModel.reset()
-                }) {
-                    Text("Reset")
-                        .fontWeight(.bold)
-                        .foregroundColor(Color(red: 55/255, green: 213/255, blue: 209/255))
-                        .padding(20)
-                        .font(.system(size: 20))
-                        .background(Color.white)
-                        .cornerRadius(80.0)
-                        .shadow(radius: 10)
+                // Navigation buttons - left and right
+                HStack(spacing: 40) {
+                    // Left button (previous)
+                    Button(action: {
+                        viewModel.goToPrevious()
+                    }) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(viewModel.canGoBack ? Color(red: 55/255, green: 213/255, blue: 209/255) : Color.gray)
+                            .padding(20)
+                            .background(Color.white)
+                            .cornerRadius(80.0)
+                            .shadow(radius: 10)
+                    }
+                    .disabled(!viewModel.canGoBack)
+
+                    // Right button (next)
+                    Button(action: {
+                        viewModel.goToNext()
+                    }) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(viewModel.canGoForward ? Color(red: 55/255, green: 213/255, blue: 209/255) : Color.gray)
+                            .padding(20)
+                            .background(Color.white)
+                            .cornerRadius(80.0)
+                            .shadow(radius: 10)
+                    }
+                    .disabled(!viewModel.canGoForward)
                 }
 
                 Spacer()

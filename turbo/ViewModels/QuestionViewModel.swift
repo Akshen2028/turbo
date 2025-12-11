@@ -55,14 +55,30 @@ class QuestionViewModel: ObservableObject {
         cards = [starter] + categoryCards
     }
 
-    // MARK: - Reset (same idea as ResetViews in old Home)
+    // MARK: - Navigation
 
-    func reset() {
-        withAnimation(.spring()) {
-            swipedCount = 0
-            // Reset offsets to 0
-            for index in cards.indices {
-                cards[index].offset = 0
+    func goToNext() {
+        if swipedCount < cards.count - 1 {
+            // Update asynchronously to avoid blocking gesture recognition
+            Task { @MainActor in
+                swipedCount += 1
+                // Reset all offsets immediately
+                for index in cards.indices {
+                    cards[index].offset = 0
+                }
+            }
+        }
+    }
+
+    func goToPrevious() {
+        if swipedCount > 0 {
+            // Update asynchronously to avoid blocking gesture recognition
+            Task { @MainActor in
+                swipedCount -= 1
+                // Reset all offsets immediately
+                for index in cards.indices {
+                    cards[index].offset = 0
+                }
             }
         }
     }
@@ -70,20 +86,33 @@ class QuestionViewModel: ObservableObject {
     // MARK: - Drag handling (onChanged / onEnd from old Home)
 
     func onChanged(value: DragGesture.Value, index: Int) {
-        // Only allow left swipe
-        if value.translation.width < 0 {
-            cards[index].offset = value.translation.width
-        }
+        // Allow both left and right swipe
+        cards[index].offset = value.translation.width
     }
 
     func onEnd(value: DragGesture.Value, index: Int) {
-        withAnimation {
-            if -value.translation.width > width / 3 {
-                // Dismiss card
-                cards[index].offset = -width
-                swipedCount += 1
-            } else {
-                // Snap back
+        if abs(value.translation.width) > width / 3 {
+            // Update asynchronously to avoid blocking gesture recognition
+            Task { @MainActor in
+                if value.translation.width < 0 {
+                    // Swipe left - go to next
+                    if swipedCount < cards.count - 1 {
+                        swipedCount += 1
+                    }
+                } else {
+                    // Swipe right - go to previous
+                    if swipedCount > 0 {
+                        swipedCount -= 1
+                    }
+                }
+                // Reset all offsets immediately
+                for i in cards.indices {
+                    cards[i].offset = 0
+                }
+            }
+        } else {
+            // Snap back with quick animation
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
                 cards[index].offset = 0
             }
         }
@@ -96,6 +125,14 @@ class QuestionViewModel: ObservableObject {
         let offset = Double(cards[index].offset)
         let angle: Double = 5
         return (offset / boxWidth) * angle
+    }
+    
+    var canGoBack: Bool {
+        swipedCount > 0
+    }
+    
+    var canGoForward: Bool {
+        swipedCount < cards.count - 1
     }
 
     func cardWidth() -> CGFloat {
