@@ -27,6 +27,7 @@ struct CustomCategoriesView: View {
                     )
                 } else {
                     ScrollView {
+                        Spacer()
                         ForEach(categoryService.customCategories) { category in
                             NavigationLink {
                                 CustomCategoryDetailView(category: category, categoryService: categoryService)
