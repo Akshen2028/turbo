@@ -9,14 +9,13 @@ import SwiftUI
 import MessageUI
 
 struct HomeView: View {
-
     @StateObject private var mailVM = MailViewModel()
-
+    
     // MARK: - Background Animation State
     @State private var isAnimatingBackground = false
     @State private var gradientStart = UnitPoint(x: 0, y: -2)
     @State private var gradientEnd = UnitPoint(x: 4, y: 0)
-
+    
     // MARK: - Constants
     private let itemsPerRow = 6
     private let tealColor = Color(red: 55/255, green: 213/255, blue: 209/255)
@@ -25,7 +24,7 @@ struct HomeView: View {
         Color.white,
         Color(red: 55/255, green: 213/255, blue: 209/255)
     ]
-
+    
     // MARK: - Body
     var body: some View {
         NavigationView {
@@ -45,7 +44,7 @@ struct HomeView: View {
         }
         .accentColor(.black)
     }
-
+    
     // MARK: - Gradient Background
     private var animatedGradientBackground: some View {
         LinearGradient(
@@ -55,7 +54,7 @@ struct HomeView: View {
         )
         .ignoresSafeArea()
     }
-
+    
     // MARK: - Animated Icons
     private var animatedIconGrid: some View {
         VStack {
@@ -83,30 +82,30 @@ struct HomeView: View {
         }
         .onAppear { isAnimatingBackground = true }
     }
-
+    
     // MARK: - Main Content
     private var mainContent: some View {
         VStack {
             Text("Talkaholic")
                 .font(.system(size: 38, weight: .bold))
                 .foregroundColor(.black)
-
+            
             NavigationLink(destination: CategoryListView()) {
                 Text("Select Category")
                     .homePrimaryButton()
             }
-
+            
             Button {
                 mailVM.prepareForQuestion()
             } label: {
                 Text("Send Questions")
                     .homeSecondaryButton(tealColor: tealColor)
             }
-
+            
             Spacer().frame(height: 200)
         }
     }
-
+    
     // MARK: - Bottom Buttons
     private var bottomButtons: some View {
         VStack {
@@ -118,12 +117,12 @@ struct HomeView: View {
             Spacer().frame(height: 200)
         }
     }
-
+    
     // MARK: - Helpers
     private func iconName(for index: Int) -> String {
         String(index % 2)
     }
-
+    
     private func numberOfRows() -> Int {
         let cellHeight = UIScreen.main.bounds.width / CGFloat(itemsPerRow)
         return Int(UIScreen.main.bounds.height / cellHeight) + 1
@@ -133,3 +132,4 @@ struct HomeView: View {
 #Preview {
     HomeView()
 }
+

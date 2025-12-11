@@ -19,14 +19,6 @@ struct QuestionView: View {
     // Background animation state
     private let itemsPerRow = 6
     @State private var isAnimatingBackground = false
-    @State private var start = UnitPoint(x: 0, y: -2)
-    @State private var end   = UnitPoint(x: 4, y: 0)
-
-    private let colors = [
-        Color.white,
-        Color.white,
-        Color(red: 55/255, green: 213/255, blue: 209/255)
-    ]
 
     @Namespace private var animation
 
@@ -55,13 +47,7 @@ struct QuestionView: View {
 
     var body: some View {
         ZStack {
-            // Gradient background
-            LinearGradient(
-                gradient: Gradient(colors: colors),
-                startPoint: start,
-                endPoint: end
-            )
-            .ignoresSafeArea()
+            GradientBackground()
 
             // Animated bubble background
             bubbleBackground
@@ -138,33 +124,13 @@ struct QuestionView: View {
 
                 // Navigation buttons - left and right
                 HStack(spacing: 40) {
-                    // Left button (previous)
-                    Button(action: {
+                    NavigationArrowButton(direction: .left, isEnabled: viewModel.canGoBack) {
                         viewModel.goToPrevious()
-                    }) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(viewModel.canGoBack ? Color(red: 55/255, green: 213/255, blue: 209/255) : Color.gray)
-                            .padding(20)
-                            .background(Color.white)
-                            .cornerRadius(80.0)
-                            .shadow(radius: 10)
                     }
-                    .disabled(!viewModel.canGoBack)
-
-                    // Right button (next)
-                    Button(action: {
+                    
+                    NavigationArrowButton(direction: .right, isEnabled: viewModel.canGoForward) {
                         viewModel.goToNext()
-                    }) {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(viewModel.canGoForward ? Color(red: 55/255, green: 213/255, blue: 209/255) : Color.gray)
-                            .padding(20)
-                            .background(Color.white)
-                            .cornerRadius(80.0)
-                            .shadow(radius: 10)
                     }
-                    .disabled(!viewModel.canGoForward)
                 }
 
                 Spacer()
@@ -249,3 +215,4 @@ struct QuestionView: View {
         )
     }
 }
+

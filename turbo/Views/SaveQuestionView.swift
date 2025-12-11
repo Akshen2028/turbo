@@ -39,27 +39,14 @@ struct SaveQuestionView: View {
                 
                 if categoryService.customCategories.isEmpty {
                     VStack(spacing: 20) {
-                        Image(systemName: "folder.badge.plus")
-                            .font(.system(size: 50))
-                            .foregroundColor(.gray)
-                        Text("No Categories Yet")
-                            .font(.headline)
-                            .foregroundColor(.gray)
-                        Text("Create a category first to save questions")
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.center)
+                        EmptyStateView(
+                            icon: "folder.badge.plus",
+                            title: "No Categories Yet",
+                            message: "Create a category first to save questions"
+                        )
                         
-                        Button(action: {
+                        PrimaryActionButton("Create Category") {
                             showingCreateCategory = true
-                        }) {
-                            Text("Create Category")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(Color(red: 55/255, green: 213/255, blue: 209/255))
-                                .cornerRadius(12)
                         }
                         .padding(.horizontal)
                     }
@@ -70,7 +57,11 @@ struct SaveQuestionView: View {
                             let isAlreadySaved = isQuestionAlreadySaved(in: category.id)
                             let isSelected = selectedCategoryId == category.id
                             
-                            Button(action: {
+                            CategorySelectionRow(
+                                category: category,
+                                isSelected: isSelected,
+                                isAlreadySaved: isAlreadySaved
+                            ) {
                                 if isAlreadySaved {
                                     // Unsave the question
                                     if categoryService.unsaveQuestion(question, from: category.id) {
@@ -81,39 +72,11 @@ struct SaveQuestionView: View {
                                     // Select to save
                                     selectedCategoryId = category.id
                                 }
-                            }) {
-                                HStack {
-                                    Image(systemName: isAlreadySaved || isSelected ? "checkmark.circle.fill" : "circle")
-                                        .foregroundColor(isAlreadySaved ? .green : (isSelected ? Color(red: 55/255, green: 213/255, blue: 209/255) : .gray))
-                                    
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        HStack {
-                                            Text(category.name)
-                                                .font(.headline)
-                                                .foregroundColor(.black)
-                                            if isAlreadySaved {
-                                                Text("(Tap to unsave)")
-                                                    .font(.caption)
-                                                    .foregroundColor(.green)
-                                            }
-                                        }
-                                        Text("\(category.questions.count) question\(category.questions.count == 1 ? "" : "s")")
-                                            .font(.subheadline)
-                                            .foregroundColor(.gray)
-                                    }
-                                    
-                                    Spacer()
-                                }
-                                .padding()
-                                .background(isAlreadySaved ? Color.green.opacity(0.1) : (isSelected ? Color(red: 55/255, green: 213/255, blue: 209/255).opacity(0.1) : Color.gray.opacity(0.05)))
-                                .cornerRadius(12)
                             }
-                            .padding(.horizontal)
-                            .padding(.vertical, 4)
                         }
                     }
                     
-                    Button(action: {
+                    PrimaryActionButton("Save", isEnabled: selectedCategoryId != nil) {
                         if let categoryId = selectedCategoryId {
                             if categoryService.saveQuestion(question, to: categoryId) {
                                 saveSuccess = true
@@ -122,16 +85,7 @@ struct SaveQuestionView: View {
                                 }
                             }
                         }
-                    }) {
-                        Text("Save")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(selectedCategoryId != nil ? Color(red: 55/255, green: 213/255, blue: 209/255) : Color.gray)
-                            .cornerRadius(12)
                     }
-                    .disabled(selectedCategoryId == nil)
                     .padding()
                     
                     if saveSuccess {
