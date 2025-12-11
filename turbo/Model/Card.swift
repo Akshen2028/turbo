@@ -7,7 +7,12 @@
 
 import Foundation
 
-struct Card: Identifiable, Hashable {
-    let id = UUID()
-    let text: String
+struct Card: Identifiable, Equatable {
+    var id = UUID().uuidString
+    var offset: CGFloat = 0
+    var q: String
+    
+    static func == (lhs: Card, rhs: Card) -> Bool {
+        lhs.id == rhs.id
+    }
 }

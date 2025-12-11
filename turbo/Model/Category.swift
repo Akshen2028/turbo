@@ -5,11 +5,11 @@
 //  Created by Akshen Jasikumar on 2025-12-04.
 //
 
-import Foundation
+import SwiftUI
 
-struct Category: Identifiable, Hashable {
-    let id = UUID()
-    let title: String
+struct Category: Identifiable, Equatable {
+    let id: Int       // 0...5 like old infoView.id
+    let name: String  // "Family", "Friends", etc.
     let imageName: String
-    let questions: [String]
 }
+

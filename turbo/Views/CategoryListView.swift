@@ -8,29 +8,71 @@
 import SwiftUI
 
 struct CategoryListView: View {
-    @StateObject private var viewModel = CategoryViewModel()
+
+    @StateObject private var viewModel = CategoryListViewModel()
+
+    // gradient from old DeckView
+    @State private var start = UnitPoint(x: 0, y: -2)
+    @State private var end   = UnitPoint(x: 4, y: 0)
+    private let colors = [
+        Color.white,
+        Color.white,
+        Color(red: 55/255, green: 213/255, blue: 209/255)
+    ]
 
     var body: some View {
-        List(viewModel.categories) { category in
-            NavigationLink(destination: QuestionView(category: category)) {
-                HStack {
-                    Image(category.imageName)
-                        .resizable()
-                        .frame(width: 50, height: 50)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+        ZStack {
+            LinearGradient(
+                gradient: Gradient(colors: colors),
+                startPoint: start,
+                endPoint: end
+            )
+            .ignoresSafeArea()
 
-                    Text(category.title)
-                        .font(.headline)
+            ScrollView {
+                ForEach(viewModel.categories) { category in
+                    NavigationLink {
+                        QuestionView(category: category)
+                    } label: {
+                        ZStack(alignment: .leading) {
+                            Image(category.imageName)
+                                .resizable()
+                                .cornerRadius(12)
+                                .aspectRatio(contentMode: .fit)
+                                .padding(40)
+                                .background(Color.white)
+                                .cornerRadius(30)
+                                .padding(10)
+                                .shadow(radius: 6)
+                                .padding(.horizontal)
+
+                            HStack {
+                                Spacer()
+                                Text(category.name)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                                    .padding(20)
+                                    .font(.system(size: 20))
+                                    .background(
+                                        Color(red: 55/255, green: 213/255, blue: 209/255)
+                                    )
+                                    .cornerRadius(80.0)
+                                    .shadow(radius: 10)
+                                Spacer()
+                            }
+                        }
+                    }
                 }
-                .padding(.vertical, 8)
             }
+            .padding(.top)
         }
-        .navigationTitle("Select Category")
+        .navigationBarTitle("Select Category")
+        .edgesIgnoringSafeArea(.bottom)
     }
 }
 
 #Preview {
-    NavigationStack {
+    NavigationView {
         CategoryListView()
     }
 }

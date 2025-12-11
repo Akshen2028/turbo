@@ -5,28 +5,286 @@
 //  Created by Akshen Jasikumar on 2025-12-04.
 //
 
-import Foundation
+import SwiftUI
 import Combine
 
 @MainActor
 class QuestionViewModel: ObservableObject {
+
+    // Cards for the currently selected category
     @Published var cards: [Card] = []
-    @Published var currentIndex: Int = 0
+    @Published var swipedCount: Int = 0
+
+    // Screen width used for swipe thresholds
+    private let width = UIScreen.main.bounds.width
+
+    let category: Category
+
+    // MARK: - Init
 
     init(category: Category) {
-        self.cards = category.questions.map { Card(text: $0) }
+        self.category = category
+        loadCards()
     }
 
-    var currentCard: Card? {
-        guard currentIndex < cards.count else { return nil }
-        return cards[currentIndex]
+    // MARK: - Load cards for category (from old CarouselViewModel)
+
+    private func loadCards() {
+        // "Swipe left" starter card
+        let starter = Card(q: "Swipe left for a question...")
+
+        let categoryCards: [Card]
+        switch category.id {
+        case 0: // Family
+            categoryCards = QuestionData.familyQuestions.shuffled().map { Card(q: $0) }
+        case 1: // Relationships
+            categoryCards = QuestionData.relationshipQuestions.shuffled().map { Card(q: $0) }
+        case 2: // Friends
+            categoryCards = QuestionData.friendQuestions.shuffled().map { Card(q: $0) }
+        case 3: // Icebreakers
+            categoryCards = QuestionData.icebreakerQuestions.shuffled().map { Card(q: $0) }
+        case 4: // Random
+            categoryCards = QuestionData.randomQuestions.shuffled().map { Card(q: $0) }
+        case 5: // Controversial
+            categoryCards = QuestionData.controversialQuestions.shuffled().map { Card(q: $0) }
+        default:
+            categoryCards = []
+        }
+
+        // Keep starter card at the bottom of the stack
+        cards = [starter] + categoryCards
     }
 
-    func nextQuestion() {
-        if currentIndex < cards.count - 1 {
-            currentIndex += 1
-        } else {
-            // Later: handle end-of-category behavior
+    // MARK: - Reset (same idea as ResetViews in old Home)
+
+    func reset() {
+        withAnimation(.spring()) {
+            swipedCount = 0
+            // Reset offsets to 0
+            for index in cards.indices {
+                cards[index].offset = 0
+            }
         }
     }
+
+    // MARK: - Drag handling (onChanged / onEnd from old Home)
+
+    func onChanged(value: DragGesture.Value, index: Int) {
+        // Only allow left swipe
+        if value.translation.width < 0 {
+            cards[index].offset = value.translation.width
+        }
+    }
+
+    func onEnd(value: DragGesture.Value, index: Int) {
+        withAnimation {
+            if -value.translation.width > width / 3 {
+                // Dismiss card
+                cards[index].offset = -width
+                swipedCount += 1
+            } else {
+                // Snap back
+                cards[index].offset = 0
+            }
+        }
+    }
+
+    // MARK: - Card layout helpers
+
+    func cardRotation(for index: Int) -> Double {
+        let boxWidth = Double(width / 3)
+        let offset = Double(cards[index].offset)
+        let angle: Double = 5
+        return (offset / boxWidth) * angle
+    }
+
+    func cardWidth() -> CGFloat {
+        UIScreen.main.bounds.width - 60 - 60
+    }
+
+    func cardHeight(for index: Int) -> CGFloat {
+        // Old code always returned 400; the variable cardHeight
+        // only affected offset, not actual height.
+        return 400
+    }
+
+    func cardOffset(for index: Int) -> CGFloat {
+        // Same logic as getCardOffset from old code but for single swipedCount
+        return index - swipedCount <= 2
+            ? CGFloat(index - swipedCount) * 30
+            : 60
+    }
+}
+
+// MARK: - Static question data (copied from CarouselViewModel)
+
+enum QuestionData {
+
+    static let familyQuestions: [String] = [
+        "What quality do your parents have that you admire?",
+        "What is the most significant value your parents have instilled in you?",
+        "Who is the most inspiring person in your family?",
+        "Out of everyone in your extended family, who are you closest to?",
+        "Who’s the most annoying family member to you?",
+        "Which family member do you get along with the most and which family member do you get along with the least?",
+        "Which TV show best represents your family?",
+        "If you could pick anyone in the world to be your parents, who would you choose?",
+        "If you could give your kid(s) one talent, what talent would you choose?",
+        "If you’re an only child: Do you wish you had siblings?\nIf you have siblings: Do you wish you were an only child?",
+        "What's the best family vacation you have been on?",
+        "If you plan on having kids in the future, what parenting moment are you looking forward to the most?",
+        "Would you consider fostering/adopting a child?",
+        "If you were to adopt a child, at what age would you tell them that they are adopted?",
+        "What is the best quality each of your siblings have?",
+        "If you were to have one more sibling, would you want them to be older or younger than you?",
+        "What is the most interesting story your grandparents have told you?",
+        "How would your personality change if you were an only child or if you had siblings?",
+        "Who's one family member you brag about/show off to others?",
+        "What is your most memorable moment with your grandparents?",
+        "If you are an older sibling, do you think you’re a good role model?",
+        "What are some differences between your mom's side and dad's side of the family?",
+        "How did your parents meet?",
+        "If you could go back and watch one moment in your grandma's and/or grandpa's life, what would it be?",
+        "Would you rather time travel into the past to meet your ancestors or into the future to meet your descendants?"
+    ]
+
+    static let relationshipQuestions: [String] = [
+        "Should the man pay for the first date?",
+        "Why did your last relationship end?",
+        "What movie makes you believe in love?",
+        "Do you believe in soul mates?",
+        "What is your deal breaker in a relationship?",
+        "What do you consider cheating?",
+        "Do you think you can maintain a long distance relationship?",
+        "Do you think you can be friends with your ex?",
+        "Do you prefer a significant other that is more similar or more different than you?",
+        "What is one thing you have learned about yourself from being in a relationship?",
+        "What is the biggest compromise you have made in a relationship?",
+        "What is your most memorable date?",
+        "Do you think keeping some secrets in a relationship is okay?",
+        "Would you rather marry someone you don’t love or marry someone who doesn’t love you?",
+        "How did you meet your current partner?",
+        "At what age do you think it is appropriate to have a relationship?",
+        "How has the relationship between your parents influenced your perception of relationships?",
+        "What's something new you started doing after you met your current/past partner?",
+        "What do you consider to be the most toxic thing in a relationship?",
+        "What is your idea of a perfect date?",
+        "What does your ideal wedding look like?",
+        "What is too large of an age gap for you in a relationship?",
+        "What is the best advice you can give to someone who is new to dating?",
+        "What are some toxic relationship traits that you think you have?",
+        "Do you believe in love at first sight?"
+    ]
+
+    static let friendQuestions: [String] = [
+        "What's one thing you would change about your relationship with your friends?",
+        "Do you have a friend that you never thought you would be close to when you first met them?",
+        "What is the best advice you’ve ever received from a friend?",
+        "What was your first impression of your friends?",
+        "Which of your friends are you most similar to?",
+        "What is a quality in each of your friends that you admire?",
+        "What vacation would you like to take with your friends?",
+        "What do you value the most in a friendship?",
+        "How did you meet your best friend?",
+        "Which of your friends would you run a business with?",
+        "Which friend do you call when times get hard?",
+        "If you had to choose, would you rather have 10 good friends or one best friend?",
+        "How would you describe each of your friends in one word?",
+        "Which TV show characters do you and your friends resemble the most?",
+        "When was the first time your friends witnessed you cry or the first time you witnessed your friends cry?",
+        "Would you stand by your friends even if they are in the wrong?",
+        "Would you live with your friends?",
+        "Which celebrity would you want to be best friends with?",
+        "Have you ever broken the law with your friends?",
+        "If you had to be trapped on a deserted island, which friend would your bring?",
+        "Which one of your friends are most likely to become famous?",
+        "If you could live a friend's life for a week, which friend would you choose?",
+        "What makes each of your friendships unique?",
+        "What's the best gift you have received from a friend?",
+        "What is one memory you have with your friends that you want to relive?"
+    ]
+
+    static let icebreakerQuestions: [String] = [
+        "If you had to create a show about yourself, what part of your life would you use for the pilot?",
+        "Which actor/actress would play you in a movie about your life?",
+        "What's the best mistake you've ever made?",
+        "If a genie were to grant you 3 wishes right now, what would you wish for?",
+        "What do you like and dislike about your current job?",
+        "What is something you did last year that you are proud of?",
+        "As an employee, what's the worst customer experience you've had?",
+        "What’s the worst job you’ve ever had?",
+        "What is your dream job?",
+        "When you die, what do you want to be remembered for?",
+        "If money wasn’t a concern, what career would you pursue?",
+        "What’s your favorite way to unwind after a busy day?",
+        "If you had to fight for one global cause for the rest of your life, what would it be?",
+        "What is your biggest fear?",
+        "What is one thing you've always wanted to do, but have been too scared to do it?",
+        "Are you a \"save the best for last\" type of person?",
+        "If you could drop everything and go anywhere, where would you go?",
+        "If you could choose any superpower to have, what would you choose?",
+        "Do you have a weird talent?",
+        "If you could speak another language, what would it be?",
+        "What’s the most useful thing you own?",
+        "If you had to delete one social media platform, what would it be?",
+        "What is something you would tell your 10 year old self?",
+        "What's one thing you would do in your life right now, if you knew you could not fail at it?",
+        "What’s your biggest passion?"
+    ]
+
+    static let randomQuestions: [String] = [
+        "What's a weird smell you like?",
+        "What is something you learned after it was already too late?",
+        "What's a reoccurring dream/nightmare you have had?",
+        "If the whole world was listening and you could say one sentence, what would you say?",
+        "What is a lie that you often tell yourself?",
+        "If you could have a second chance at one event in your life, what would you choose?",
+        "What is your most memorable interaction with a stranger?",
+        "If you could pick a new first name, what would it be?",
+        "What is your most embarrassing moment?",
+        "Would you rather forget everyone you know or have everyone you know forget you?",
+        "What is the worst advice you have ever given?",
+        "Where do you see yourself in the next 10 years?",
+        "Would you rather have a rewind button or a pause button on your life?",
+        "Would you rather speak with animals or speak all foreign languages?",
+        "Do you believe in life beyond earth?",
+        "Do you think alcohol is necessary to have a fun time?",
+        "Do you think you have seen every digit combination on the clock?",
+        "Would you like to find out how you die?",
+        "If you could be immortal for a day, what would you do?",
+        "If you could know the absolute truth to one question, what would you ask?",
+        "When was the last time you did something for the first time?",
+        "What's your biggest insecurity?",
+        "How did technology affect your childhood?",
+        "If you could live in any story line (movie, book, TV show, etc.), what would it be?",
+        "If you had the power to correct one problem in the world, what would it be?"
+    ]
+
+    static let controversialQuestions: [String] = [
+        "Is the world better with religion or would it be better without it?",
+        "Can a person be born evil?",
+        "Should the current prison system be abolished?",
+        "Are you for or against abortion?",
+        "Should human cloning be legal?",
+        "Should healthcare be free?",
+        "Would you change your future child's genetic makeup if you could?",
+        "What’s the hardest health to keep healthy? Spiritual, mental, emotional, or physical?",
+        "Do you think it should be a fundamental right to own firearms?",
+        "Do you believe in fate or free will?",
+        "Do you believe in the death penalty?",
+        "Should billionaires exist?",
+        "Do you agree with the legal drinking age?",
+        "Should all recreational drugs be legalized?",
+        "Should post secondary education be free?",
+        "Do you think social media has improved human communication?",
+        "Should all vaccines be mandatory?",
+        "Should taxes be raised on the wealthy?",
+        "Should animal testing be illegal?",
+        "Do you think Zoos should exist?",
+        "Should euthanasia be legal?",
+        "Should people be fined according to their income?",
+        "Should it be mandatory to tip at restaurants?",
+        "To what extent should the government have access to your personal information?",
+        "Is artificial intelligence more of a threat or a benefit to society?"
+    ]
 }
