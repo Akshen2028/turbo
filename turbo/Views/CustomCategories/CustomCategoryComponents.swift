@@ -36,7 +36,8 @@ struct CustomCategoryRow: View {
         .padding()
         .background(Color.white)
         .cornerRadius(12)
-        .padding(3)
+        .padding(.top,8)
+        .padding(.bottom,8)
         .shadow(radius: 4)
         .padding(.horizontal)
     }

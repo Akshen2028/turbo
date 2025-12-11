@@ -23,12 +23,24 @@ struct CustomCategoryDetailView: View {
                     message: "Save questions from other categories to this category!"
                 )
             } else {
-                ScrollView {
+                List {
                     ForEach(category.questions) { question in
                         QuestionCard(question: question.question)
+                            .listRowInsets(EdgeInsets())
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    delete(question: question)
+                                } label: {
+                                    Image(systemName: "minus.circle.fill")
+                                }
+                            }
                     }
                 }
-                .padding(.top)
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
             }
         }
         .navigationTitle(category.name)
@@ -51,6 +63,11 @@ struct CustomCategoryDetailView: View {
         } message: {
             Text("Are you sure you want to delete \"\(category.name)\"? All questions in this category will be deleted.")
         }
+    }
+
+    // MARK: - Helpers
+    private func delete(question: SavedQuestion) {
+        categoryService.deleteQuestion(question, from: category.id)
     }
 }
 

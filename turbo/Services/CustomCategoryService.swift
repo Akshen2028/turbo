@@ -186,6 +186,22 @@ class CustomCategoryService: ObservableObject {
         }
     }
     
+    // Delete question by index set (for List swipe-to-delete)
+    func deleteQuestion(at offsets: IndexSet, in category: CustomCategory) {
+        let idsToDelete = offsets.compactMap { category.questions[$0].id }
+        let request: NSFetchRequest<SavedQuestionEntity> = SavedQuestionEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id IN %@", idsToDelete)
+        
+        do {
+            let entities = try context.fetch(request)
+            entities.forEach { context.delete($0) }
+            try context.save()
+            loadCategories()
+        } catch {
+            print("Failed to delete questions by offsets: \(error)")
+        }
+    }
+    
     // MARK: - Unsave Question (delete by question text)
     
     func unsaveQuestion(_ question: String, from categoryId: UUID) -> Bool {
