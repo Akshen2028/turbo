@@ -109,7 +109,7 @@ struct QuestionView: View {
                     }
                 }
                 .transaction { transaction in
-                    transaction.animation = .easeOut(duration: 0.15)
+                    transaction.animation = .easeOut(duration: 0.3)
                 }
                 .padding(.top, 25)
                 .padding(.horizontal, 30)
