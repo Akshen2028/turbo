@@ -7,10 +7,11 @@
 
 import SwiftUI
 import CoreData
+import Combine
 
 struct CustomCategoriesView: View {
     @Environment(\.managedObjectContext) private var viewContext
-    @StateObject private var categoryService = CustomCategoryService(context: PersistenceController.shared.container.viewContext)
+    @EnvironmentObject var categoryService: CustomCategoryService
     @State private var showingCreateCategory = false
     @State private var newCategoryName = ""
     @State private var pendingDeleteCategory: CustomCategory?
@@ -80,7 +81,7 @@ struct CustomCategoriesView: View {
         }
         .navigationTitle("My Categories")
         .sheet(isPresented: $showingCreateCategory) {
-            CreateCategoryView(categoryService: categoryService, isPresented: $showingCreateCategory)
+            CreateCategoryView(isPresented: $showingCreateCategory)
         }
         .alert("Delete Category", isPresented: Binding(get: {
             pendingDeleteCategory != nil
@@ -109,5 +110,6 @@ struct CustomCategoriesView: View {
 #Preview {
     CustomCategoriesView()
         .environment(\.managedObjectContext, PersistenceController.shared.container.viewContext)
+        .environmentObject(CustomCategoryService(context: PersistenceController.shared.container.viewContext))
 }
 

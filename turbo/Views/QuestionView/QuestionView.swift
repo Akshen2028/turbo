@@ -13,7 +13,7 @@ struct QuestionView: View {
     let category: Category
     @StateObject private var viewModel: QuestionViewModel
     @Environment(\.managedObjectContext) private var viewContext
-    @StateObject private var categoryService = CustomCategoryService(context: PersistenceController.shared.container.viewContext)
+    @EnvironmentObject var categoryService: CustomCategoryService
     @State private var showingSaveSheet = false
 
     // Background animation state
@@ -25,6 +25,11 @@ struct QuestionView: View {
     init(category: Category) {
         self.category = category
         _viewModel = StateObject(wrappedValue: QuestionViewModel(category: category))
+    }
+    
+    // Update view model's service reference when the environment object is available
+    private func updateViewModelService() {
+        viewModel.categoryService = categoryService
     }
     
     private var currentQuestion: String {
@@ -130,7 +135,7 @@ struct QuestionView: View {
                 // Edit button for custom categories (jump to category detail to manage/delete)
                 if let customCategory = categoryService.customCategories.first(where: { $0.id == category.customCategoryId }) {
                     NavigationLink {
-                        CustomCategoryDetailView(category: customCategory, categoryService: categoryService)
+                        CustomCategoryDetailView(category: customCategory)
                     } label: {
                         Image(systemName: "pencil.circle.fill")
                             .font(.system(size: 56, weight: .bold))
@@ -150,6 +155,10 @@ struct QuestionView: View {
                 Spacer()
             }
         }
+        .onAppear {
+            // Update view model with the shared service instance
+            updateViewModelService()
+        }
         .navigationTitle(category.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -167,7 +176,6 @@ struct QuestionView: View {
         .sheet(isPresented: $showingSaveSheet) {
             SaveQuestionView(
                 question: currentQuestion,
-                categoryService: categoryService,
                 isPresented: $showingSaveSheet
             )
         }

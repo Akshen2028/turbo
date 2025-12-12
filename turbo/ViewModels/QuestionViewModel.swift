@@ -20,12 +20,49 @@ class QuestionViewModel: ObservableObject {
     private let width = UIScreen.main.bounds.width
 
     let category: Category
+    var categoryService: CustomCategoryService? {
+        didSet {
+            setupServiceObservation()
+        }
+    }
+    private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Init
 
     init(category: Category) {
         self.category = category
         loadCards()
+    }
+    
+    // MARK: - Service Observation
+    
+    private func setupServiceObservation() {
+        guard let categoryService = categoryService, category.isCustom else { return }
+        
+        // Clear any existing subscriptions
+        cancellables.removeAll()
+        
+        // Observe changes to custom categories and reload if this category's questions changed
+        categoryService.$customCategories
+            .dropFirst() // Skip initial value
+            .sink { [weak self] categories in
+                guard let self = self else { return }
+                // Check if this category's questions changed
+                if let updatedCategory = categories.first(where: { $0.id == self.category.customCategoryId }) {
+                    let oldCount = self.cards.count - 1 // Subtract starter card
+                    let newCount = updatedCategory.questions.count
+                    if oldCount != newCount {
+                        // Reload cards to reflect the change
+                        let oldSwipedCount = self.swipedCount
+                        self.loadCards()
+                        // Reset swipedCount if it's beyond the new card count
+                        if oldSwipedCount >= self.cards.count {
+                            self.swipedCount = max(0, self.cards.count - 1)
+                        }
+                    }
+                }
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: - Load cards for category (from old CarouselViewModel)

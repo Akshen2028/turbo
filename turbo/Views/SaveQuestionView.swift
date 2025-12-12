@@ -9,7 +9,7 @@ import SwiftUI
 
 struct SaveQuestionView: View {
     let question: String
-    @ObservedObject var categoryService: CustomCategoryService
+    @EnvironmentObject var categoryService: CustomCategoryService
     @Binding var isPresented: Bool
     @State private var selectedCategoryIds: Set<UUID> = []
     @State private var showingCreateCategory = false
@@ -120,7 +120,7 @@ struct SaveQuestionView: View {
                 }
             }
             .sheet(isPresented: $showingCreateCategory) {
-                CreateCategoryView(categoryService: categoryService, isPresented: $showingCreateCategory)
+                CreateCategoryView(isPresented: $showingCreateCategory)
             }
         }
     }

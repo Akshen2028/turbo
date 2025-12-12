@@ -9,41 +9,55 @@ import SwiftUI
 
 struct CustomCategoryDetailView: View {
     let category: CustomCategory
-    @ObservedObject var categoryService: CustomCategoryService
+    @EnvironmentObject var categoryService: CustomCategoryService
     @State private var showingDeleteAlert = false
+    
+    // Get the current category from the service to reflect real-time updates
+    private var currentCategory: CustomCategory? {
+        categoryService.customCategories.first { $0.id == category.id }
+    }
     
     var body: some View {
         ZStack {
             GradientBackground()
             
-            if category.questions.isEmpty {
+            if let currentCategory = currentCategory {
+                if currentCategory.questions.isEmpty {
+                    EmptyStateView(
+                        icon: "questionmark.circle",
+                        title: "No Questions Yet",
+                        message: "Save questions from other categories to this category!"
+                    )
+                } else {
+                    List {
+                        ForEach(currentCategory.questions) { question in
+                            QuestionCard(question: question.question)
+                                .listRowInsets(EdgeInsets())
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color.clear)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        delete(question: question)
+                                    } label: {
+                                        Image(systemName: "minus.circle.fill")
+                                    }
+                                }
+                        }
+                    }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.clear)
+                }
+            } else {
+                // Fallback if category not found (shouldn't happen, but handle gracefully)
                 EmptyStateView(
                     icon: "questionmark.circle",
-                    title: "No Questions Yet",
-                    message: "Save questions from other categories to this category!"
+                    title: "Category Not Found",
+                    message: "This category may have been deleted."
                 )
-            } else {
-                List {
-                    ForEach(category.questions) { question in
-                        QuestionCard(question: question.question)
-                            .listRowInsets(EdgeInsets())
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    delete(question: question)
-                                } label: {
-                                    Image(systemName: "minus.circle.fill")
-                                }
-                            }
-                    }
-                }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .background(Color.clear)
             }
         }
-        .navigationTitle(category.name)
+        .navigationTitle(currentCategory?.name ?? category.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -58,16 +72,25 @@ struct CustomCategoryDetailView: View {
         .alert("Delete Category", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
-                categoryService.deleteCategory(category)
+                if let currentCategory = currentCategory {
+                    categoryService.deleteCategory(currentCategory)
+                } else {
+                    categoryService.deleteCategory(category)
+                }
             }
         } message: {
-            Text("Are you sure you want to delete \"\(category.name)\"? All questions in this category will be deleted.")
+            let categoryName = currentCategory?.name ?? category.name
+            Text("Are you sure you want to delete \"\(categoryName)\"? All questions in this category will be deleted.")
         }
     }
 
     // MARK: - Helpers
     private func delete(question: SavedQuestion) {
-        categoryService.deleteQuestion(question, from: category.id)
+        if let currentCategory = currentCategory {
+            categoryService.deleteQuestion(question, from: currentCategory.id)
+        } else {
+            categoryService.deleteQuestion(question, from: category.id)
+        }
     }
 }
 

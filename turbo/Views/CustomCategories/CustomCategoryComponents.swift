@@ -10,6 +10,12 @@ import SwiftUI
 // MARK: - Custom Category Row (was shared; now used only in CustomCategories)
 struct CustomCategoryRow: View {
     let category: CustomCategory
+    @EnvironmentObject var categoryService: CustomCategoryService
+    
+    // Get the current category from the service to reflect real-time updates
+    private var currentCategory: CustomCategory? {
+        categoryService.customCategories.first { $0.id == category.id }
+    }
     
     var body: some View {
         HStack {
@@ -19,11 +25,11 @@ struct CustomCategoryRow: View {
                 .frame(width: 50)
             
             VStack(alignment: .leading, spacing: 4) {
-                Text(category.name)
+                Text(currentCategory?.name ?? category.name)
                     .font(.title3)
                     .fontWeight(.bold)
                     .foregroundColor(.black)
-                Text("\(category.questions.count) question\(category.questions.count == 1 ? "" : "s")")
+                Text("\(currentCategory?.questions.count ?? category.questions.count) question\((currentCategory?.questions.count ?? category.questions.count) == 1 ? "" : "s")")
                     .font(.subheadline)
                     .foregroundColor(.gray)
             }

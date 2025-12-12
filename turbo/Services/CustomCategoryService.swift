@@ -29,7 +29,8 @@ class CustomCategoryService: ObservableObject {
         
         do {
             let entities = try context.fetch(request)
-            customCategories = entities.map { entity in
+            // Create a completely new array to ensure SwiftUI detects the change
+            let newCategories = entities.map { entity in
                 CustomCategory(
                     id: entity.id ?? UUID(),
                     name: entity.name ?? "",
@@ -37,6 +38,8 @@ class CustomCategoryService: ObservableObject {
                     questions: loadQuestions(for: entity)
                 )
             }
+            // Explicitly assign to trigger @Published
+            customCategories = newCategories
         } catch {
             print("Failed to load custom categories: \(error)")
             customCategories = []

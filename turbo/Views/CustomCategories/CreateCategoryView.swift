@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct CreateCategoryView: View {
-    @ObservedObject var categoryService: CustomCategoryService
+    @EnvironmentObject var categoryService: CustomCategoryService
     @Binding var isPresented: Bool
     @State private var categoryName = ""
     
