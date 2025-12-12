@@ -79,28 +79,28 @@ class QuestionViewModel: ObservableObject {
             categoryCards = loadCustomCategoryQuestions(categoryId: customCategoryId)
         } else {
             // Load from regular categories
-            switch category.id {
-            case 0: // Family
-                categoryCards = QuestionData.familyQuestions.shuffled().map { Card(q: $0) }
-            case 1: // Relationships
-                categoryCards = QuestionData.relationshipQuestions.shuffled().map { Card(q: $0) }
-            case 2: // Friends
-                categoryCards = QuestionData.friendQuestions.shuffled().map { Card(q: $0) }
-            case 3: // Icebreakers
-                categoryCards = QuestionData.icebreakerQuestions.shuffled().map { Card(q: $0) }
-            case 4: // Random
-                categoryCards = QuestionData.randomQuestions.shuffled().map { Card(q: $0) }
-            case 5: // Controversial
-                categoryCards = QuestionData.controversialQuestions.shuffled().map { Card(q: $0) }
-            default:
-                categoryCards = []
+        switch category.id {
+        case 0: // Family
+            categoryCards = QuestionData.familyQuestions.shuffled().map { Card(q: $0) }
+        case 1: // Relationships
+            categoryCards = QuestionData.relationshipQuestions.shuffled().map { Card(q: $0) }
+        case 2: // Friends
+            categoryCards = QuestionData.friendQuestions.shuffled().map { Card(q: $0) }
+        case 3: // Icebreakers
+            categoryCards = QuestionData.icebreakerQuestions.shuffled().map { Card(q: $0) }
+        case 4: // Random
+            categoryCards = QuestionData.randomQuestions.shuffled().map { Card(q: $0) }
+        case 5: // Controversial
+            categoryCards = QuestionData.controversialQuestions.shuffled().map { Card(q: $0) }
+        default:
+            categoryCards = []
             }
         }
 
         // Keep starter card at the bottom of the stack
         cards = [starter] + categoryCards
     }
-    
+
     private func loadCustomCategoryQuestions(categoryId: UUID) -> [Card] {
         let context = PersistenceController.shared.container.viewContext
         let request: NSFetchRequest<CustomCategoryEntity> = CustomCategoryEntity.fetchRequest()
@@ -148,8 +148,8 @@ class QuestionViewModel: ObservableObject {
             Task { @MainActor in
                 swipedCount -= 1
                 // Reset all offsets immediately
-                for index in cards.indices {
-                    cards[index].offset = 0
+        for index in cards.indices {
+            cards[index].offset = 0
                 }
             }
         }
@@ -190,7 +190,7 @@ class QuestionViewModel: ObservableObject {
                 if value.translation.width < 0 {
                     // Swipe left - go to next
                     if swipedCount < cards.count - 1 {
-                        swipedCount += 1
+                swipedCount += 1
                     }
                 } else {
                     // Swipe right - go to previous
@@ -203,7 +203,7 @@ class QuestionViewModel: ObservableObject {
                     cards[i].offset = 0
                 }
             }
-        } else {
+            } else {
             // Snap back with quick animation
             withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
                 cards[index].offset = 0

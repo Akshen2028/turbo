@@ -11,6 +11,7 @@ struct SaveQuestionView: View {
     let question: String
     @EnvironmentObject var categoryService: CustomCategoryService
     @Binding var isPresented: Bool
+    @State private var frozenQuestion: String = "" // Freeze the question to prevent it from changing
     @State private var selectedCategoryIds: Set<UUID> = []
     @State private var showingCreateCategory = false
     @State private var saveSuccess = false
@@ -19,7 +20,8 @@ struct SaveQuestionView: View {
     @State private var initialSavedCategoryIds: Set<UUID> = []
     
     private func isQuestionAlreadySaved(in categoryId: UUID) -> Bool {
-        categoryService.questionExists(question, in: categoryId)
+        let questionToCheck = frozenQuestion.isEmpty ? question : frozenQuestion
+        return categoryService.questionExists(questionToCheck, in: categoryId)
     }
     
     // Check if there are any changes to save
@@ -36,6 +38,13 @@ struct SaveQuestionView: View {
         initialSavedCategoryIds = savedIds
     }
     
+    // Freeze the question when view appears
+    private func freezeQuestion() {
+        if frozenQuestion.isEmpty {
+            frozenQuestion = question
+        }
+    }
+    
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
@@ -45,7 +54,7 @@ struct SaveQuestionView: View {
                         .font(.title2)
                         .fontWeight(.bold)
                     
-                    Text(question)
+                    Text(frozenQuestion.isEmpty ? question : frozenQuestion)
                         .font(.body)
                         .foregroundColor(.gray)
                         .padding()
@@ -90,11 +99,14 @@ struct SaveQuestionView: View {
                     }
                     
                     PrimaryActionButton("Save", isEnabled: hasChanges) {
+                        // Use frozen question to ensure we're working with the original question
+                        let questionToSave = frozenQuestion.isEmpty ? question : frozenQuestion
+                        
                         // Save to newly selected categories
                         let categoriesToSave = selectedCategoryIds.subtracting(initialSavedCategoryIds)
                         var anySaved = false
                         for id in categoriesToSave {
-                            if categoryService.saveQuestion(question, to: id) {
+                            if categoryService.saveQuestion(questionToSave, to: id) {
                                 anySaved = true
                             }
                         }
@@ -103,7 +115,7 @@ struct SaveQuestionView: View {
                         let categoriesToUnsave = initialSavedCategoryIds.subtracting(selectedCategoryIds)
                         var anyUnsaved = false
                         for id in categoriesToUnsave {
-                            if categoryService.unsaveQuestion(question, from: id) {
+                            if categoryService.unsaveQuestion(questionToSave, from: id) {
                                 anyUnsaved = true
                             }
                         }
@@ -141,7 +153,8 @@ struct SaveQuestionView: View {
                 CreateCategoryView(isPresented: $showingCreateCategory)
             }
             .onAppear {
-                // Initialize selections when view appears
+                // Freeze the question and initialize selections when view appears
+                freezeQuestion()
                 initializeSelections()
             }
         }
