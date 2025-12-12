@@ -72,10 +72,12 @@ struct CustomCategoryDetailView: View {
         .alert("Delete Category", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
-                if let currentCategory = currentCategory {
-                    categoryService.deleteCategory(currentCategory)
-                } else {
-                    categoryService.deleteCategory(category)
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    if let currentCategory = currentCategory {
+                        categoryService.deleteCategory(currentCategory)
+                    } else {
+                        categoryService.deleteCategory(category)
+                    }
                 }
             }
         } message: {
@@ -86,10 +88,12 @@ struct CustomCategoryDetailView: View {
 
     // MARK: - Helpers
     private func delete(question: SavedQuestion) {
-        if let currentCategory = currentCategory {
-            categoryService.deleteQuestion(question, from: currentCategory.id)
-        } else {
-            categoryService.deleteQuestion(question, from: category.id)
+        withAnimation(.easeInOut(duration: 0.2)) {
+            if let currentCategory = currentCategory {
+                categoryService.deleteQuestion(question, from: currentCategory.id)
+            } else {
+                categoryService.deleteQuestion(question, from: category.id)
+            }
         }
     }
 }

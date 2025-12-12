@@ -90,7 +90,9 @@ struct CustomCategoriesView: View {
         })) {
             Button("Delete", role: .destructive) {
                 if let cat = pendingDeleteCategory {
-                    categoryService.deleteCategory(cat)
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        categoryService.deleteCategory(cat)
+                    }
                 }
                 pendingDeleteCategory = nil
             }
