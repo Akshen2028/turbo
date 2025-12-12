@@ -43,7 +43,12 @@ struct CategorySelectionRow: View {
     let category: CustomCategory
     let isSelected: Bool              // Current selection state (includes toggles)
     let isOriginallySaved: Bool       // Was already saved when sheet opened
+    let displayCount: Int?            // Optional override for optimistic counts
     let action: () -> Void
+    
+    private var questionCount: Int {
+        displayCount ?? category.questions.count
+    }
     
     var body: some View {
         Button(action: action) {
@@ -66,7 +71,7 @@ struct CategorySelectionRow: View {
                                 .foregroundColor(.green)
                         }
                     }
-                    Text("\(category.questions.count) question\(category.questions.count == 1 ? "" : "s")")
+                    Text("\(questionCount) question\(questionCount == 1 ? "" : "s")")
                         .font(.subheadline)
                         .foregroundColor(.gray)
                 }

@@ -83,10 +83,22 @@ struct SaveQuestionView: View {
                             let isOriginallySaved = isQuestionAlreadySaved(in: category.id)
                             let isSelected = selectedCategoryIds.contains(category.id)
                             
+                            // Optimistic display count: adjust based on selection vs original state
+                            let displayCount: Int = {
+                                let baseCount = category.questions.count
+                                if !isOriginallySaved && isSelected {
+                                    return baseCount + 1
+                                } else if isOriginallySaved && !isSelected {
+                                    return max(0, baseCount - 1)
+                                }
+                                return baseCount
+                            }()
+                            
                             CategorySelectionRow(
                                 category: category,
                                 isSelected: isSelected,
-                                isOriginallySaved: isOriginallySaved
+                                isOriginallySaved: isOriginallySaved,
+                                displayCount: displayCount
                             ) {
                                 // Just toggle selection - don't save/unsave immediately
                                 if isSelected {
