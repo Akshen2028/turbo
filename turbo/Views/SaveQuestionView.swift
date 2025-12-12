@@ -15,8 +15,25 @@ struct SaveQuestionView: View {
     @State private var showingCreateCategory = false
     @State private var saveSuccess = false
     
+    // Track initial state to detect changes
+    @State private var initialSavedCategoryIds: Set<UUID> = []
+    
     private func isQuestionAlreadySaved(in categoryId: UUID) -> Bool {
         categoryService.questionExists(question, in: categoryId)
+    }
+    
+    // Check if there are any changes to save
+    private var hasChanges: Bool {
+        selectedCategoryIds != initialSavedCategoryIds
+    }
+    
+    // Initialize selectedCategoryIds with currently saved categories
+    private func initializeSelections() {
+        let savedIds = Set(categoryService.customCategories.filter { category in
+            isQuestionAlreadySaved(in: category.id)
+        }.map { $0.id })
+        selectedCategoryIds = savedIds
+        initialSavedCategoryIds = savedIds
     }
     
     var body: some View {
@@ -54,43 +71,44 @@ struct SaveQuestionView: View {
                 } else {
                     ScrollView {
                         ForEach(categoryService.customCategories) { category in
-                            let isAlreadySaved = isQuestionAlreadySaved(in: category.id)
+                            let isOriginallySaved = isQuestionAlreadySaved(in: category.id)
                             let isSelected = selectedCategoryIds.contains(category.id)
                             
                             CategorySelectionRow(
                                 category: category,
                                 isSelected: isSelected,
-                                isAlreadySaved: isAlreadySaved
+                                isOriginallySaved: isOriginallySaved
                             ) {
-                                if isAlreadySaved {
-                                    // Unsave the question
-                                    if categoryService.unsaveQuestion(question, from: category.id) {
-                                        // Question was unsaved, refresh the view
-                                        selectedCategoryIds.remove(category.id)
-                                    }
+                                // Just toggle selection - don't save/unsave immediately
+                                if isSelected {
+                                    selectedCategoryIds.remove(category.id)
                                 } else {
-                                    // Toggle selection
-                                    if isSelected {
-                                        selectedCategoryIds.remove(category.id)
-                                    } else {
-                                        selectedCategoryIds.insert(category.id)
-                                    }
+                                    selectedCategoryIds.insert(category.id)
                                 }
                             }
                         }
                     }
                     
-                    PrimaryActionButton("Save", isEnabled: !selectedCategoryIds.isEmpty) {
-                        let categoriesToSave = selectedCategoryIds
+                    PrimaryActionButton("Save", isEnabled: hasChanges) {
+                        // Save to newly selected categories
+                        let categoriesToSave = selectedCategoryIds.subtracting(initialSavedCategoryIds)
                         var anySaved = false
                         for id in categoriesToSave {
-                            if !isQuestionAlreadySaved(in: id) {
-                                if categoryService.saveQuestion(question, to: id) {
-                                    anySaved = true
-                                }
+                            if categoryService.saveQuestion(question, to: id) {
+                                anySaved = true
                             }
                         }
-                        if anySaved {
+                        
+                        // Unsave from deselected categories
+                        let categoriesToUnsave = initialSavedCategoryIds.subtracting(selectedCategoryIds)
+                        var anyUnsaved = false
+                        for id in categoriesToUnsave {
+                            if categoryService.unsaveQuestion(question, from: id) {
+                                anyUnsaved = true
+                            }
+                        }
+                        
+                        if anySaved || anyUnsaved {
                             saveSuccess = true
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                                 isPresented = false
@@ -121,6 +139,10 @@ struct SaveQuestionView: View {
             }
             .sheet(isPresented: $showingCreateCategory) {
                 CreateCategoryView(isPresented: $showingCreateCategory)
+            }
+            .onAppear {
+                // Initialize selections when view appears
+                initializeSelections()
             }
         }
     }

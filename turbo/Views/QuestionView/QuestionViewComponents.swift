@@ -41,23 +41,27 @@ struct NavigationArrowButton: View {
 // MARK: - Category Selection Row
 struct CategorySelectionRow: View {
     let category: CustomCategory
-    let isSelected: Bool
-    let isAlreadySaved: Bool
+    let isSelected: Bool              // Current selection state (includes toggles)
+    let isOriginallySaved: Bool       // Was already saved when sheet opened
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
             HStack {
-                Image(systemName: isAlreadySaved || isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isAlreadySaved ? .green : (isSelected ? Color(red: 55/255, green: 213/255, blue: 209/255) : .gray))
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundColor(
+                        isSelected
+                        ? (isOriginallySaved ? .green : Color(red: 55/255, green: 213/255, blue: 209/255))
+                        : .gray
+                    )
                 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(category.name)
                             .font(.headline)
                             .foregroundColor(.black)
-                        if isAlreadySaved {
-                            Text("(Tap to unsave)")
+                        if isOriginallySaved {
+                            Text(isSelected ? "(Tap to unsave)" : "(Will unsave)")
                                 .font(.caption)
                                 .foregroundColor(.green)
                         }
@@ -70,7 +74,11 @@ struct CategorySelectionRow: View {
                 Spacer()
             }
             .padding()
-            .background(isAlreadySaved ? Color.green.opacity(0.1) : (isSelected ? Color(red: 55/255, green: 213/255, blue: 209/255).opacity(0.1) : Color.gray.opacity(0.05)))
+            .background(
+                isSelected
+                ? (isOriginallySaved ? Color.green.opacity(0.1) : Color(red: 55/255, green: 213/255, blue: 209/255).opacity(0.1))
+                : Color.gray.opacity(0.05)
+            )
             .cornerRadius(12)
         }
         .padding(.horizontal)
