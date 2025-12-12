@@ -13,6 +13,7 @@ struct QuestionView: View {
     let category: Category
     @StateObject private var viewModel: QuestionViewModel
     @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var categoryService: CustomCategoryService
     @State private var showingSaveSheet = false
 
@@ -135,7 +136,13 @@ struct QuestionView: View {
                 // Edit button for custom categories (jump to category detail to manage/delete)
                 if let customCategory = categoryService.customCategories.first(where: { $0.id == category.customCategoryId }) {
                     NavigationLink {
-                        CustomCategoryDetailView(category: customCategory)
+                        CustomCategoryDetailView(category: customCategory, onCategoryDeleted: {
+                            // Dismiss QuestionView after deleting category (no animation to avoid flicker)
+                            let transaction = Transaction(animation: .none)
+                            withTransaction(transaction) {
+                                dismiss()
+                            }
+                        })
                     } label: {
                         Image(systemName: "pencil.circle.fill")
                             .font(.system(size: 56, weight: .bold))

@@ -9,7 +9,10 @@ import SwiftUI
 
 struct CustomCategoryDetailView: View {
     let category: CustomCategory
+    /// Optional callback to let a parent view (e.g., QuestionView) dismiss itself when the category is deleted.
+    let onCategoryDeleted: (() -> Void)?
     @EnvironmentObject var categoryService: CustomCategoryService
+    @Environment(\.dismiss) private var dismiss
     @State private var showingDeleteAlert = false
     
     // Get the current category from the service to reflect real-time updates
@@ -77,6 +80,15 @@ struct CustomCategoryDetailView: View {
                         categoryService.deleteCategory(currentCategory)
                     } else {
                         categoryService.deleteCategory(category)
+                    }
+                    // Pop this detail view, then ask parent to pop QuestionView.
+                    // Use no-animation dismiss to avoid intermediate flicker.
+                    let transaction = Transaction(animation: .none)
+                    withTransaction(transaction) {
+                        dismiss()
+                    }
+                    DispatchQueue.main.async {
+                        onCategoryDeleted?()
                     }
                 }
             }
