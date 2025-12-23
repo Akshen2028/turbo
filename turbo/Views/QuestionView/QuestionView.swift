@@ -240,27 +240,43 @@ struct QuestionView: View {
                         // Generated question card (positioned like current card)
                         HStack {
                             Spacer()
-                            CardView(card: Card(q: generatedQuestion), animation: animation)
+                            ZStack {
+                                // Card background - show empty or actual question
+                                CardView(
+                                    card: Card(q: isGenerating ? "Generating question..." : generatedQuestion),
+                                    animation: animation,
+                                    textColor: isGenerating ? .gray : .black
+                                )
                                 .frame(width: viewModel.cardWidth(), height: 400)
-                                .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                                .shadow(
-                                    color: Color(hue: glowHue.truncatingRemainder(dividingBy: 1.0), saturation: 1.0, brightness: 1.0).opacity(0.8),
-                                    radius: shadowRadius,
-                                    x: 0,
-                                    y: 0
-                                )
-                                .shadow(
-                                    color: Color(hue: (glowHue + 0.15).truncatingRemainder(dividingBy: 1.0), saturation: 1.0, brightness: 1.0).opacity(0.6),
-                                    radius: shadowRadius * 1.3,
-                                    x: 0,
-                                    y: 0
-                                )
-                                .shadow(
-                                    color: Color(hue: (glowHue + 0.3).truncatingRemainder(dividingBy: 1.0), saturation: 1.0, brightness: 1.0).opacity(0.4),
-                                    radius: shadowRadius * 1.6,
-                                    x: 0,
-                                    y: 0
-                                )
+                                .fixedSize(horizontal: false, vertical: false)  // Prevent expansion
+                                .clipped()  // Clip any overflow
+                                .opacity(isGenerating ? 0.7 : 1.0)
+                                
+                                // Rainbow spinner overlay when loading
+                                if isGenerating {
+                                    RainbowSpinner()
+                                        .frame(width: 60, height: 60)
+                                }
+                            }
+                            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                            .shadow(
+                                color: Color(hue: glowHue.truncatingRemainder(dividingBy: 1.0), saturation: 1.0, brightness: 1.0).opacity(0.8),
+                                radius: shadowRadius,
+                                x: 0,
+                                y: 0
+                            )
+                            .shadow(
+                                color: Color(hue: (glowHue + 0.15).truncatingRemainder(dividingBy: 1.0), saturation: 1.0, brightness: 1.0).opacity(0.6),
+                                radius: shadowRadius * 1.3,
+                                x: 0,
+                                y: 0
+                            )
+                            .shadow(
+                                color: Color(hue: (glowHue + 0.3).truncatingRemainder(dividingBy: 1.0), saturation: 1.0, brightness: 1.0).opacity(0.4),
+                                radius: shadowRadius * 1.6,
+                                x: 0,
+                                y: 0
+                            )
                             Spacer(minLength: 0)
                         }
                         .frame(height: 400)
@@ -281,9 +297,10 @@ struct QuestionView: View {
                                     .frame(width: 70, height: 70)
                                     .background(
                                         Circle()
-                                            .fill(Color.red)
+                                            .fill(isGenerating ? Color.gray : Color.red)
                                     )
                             }
+                            .disabled(isGenerating)
                             
                             // Like button
                             Button(action: {
@@ -295,9 +312,10 @@ struct QuestionView: View {
                                     .frame(width: 70, height: 70)
                                     .background(
                                         Circle()
-                                            .fill(Color.green)
+                                            .fill(isGenerating ? Color.gray : Color.green)
                                     )
                             }
+                            .disabled(isGenerating)
                         }
                         .padding(.top, 20)
                         
@@ -430,9 +448,14 @@ struct QuestionView: View {
                 showLikeDislike = false
             }
         }
-        generatedQuestion = nil
         
+        // Show the overlay immediately with loading state
+        generatedQuestion = "" // Empty text while loading, spinner will show
         isGenerating = true
+        
+        withAnimation(.easeIn(duration: 0.3)) {
+            showLikeDislike = true
+        }
         
         Task {
             let question = await questionGenerationService.generateQuestion(for: category.name)
@@ -440,11 +463,6 @@ struct QuestionView: View {
             await MainActor.run {
                 generatedQuestion = question
                 isGenerating = false
-                
-                // Fade in the question and like/dislike buttons
-                withAnimation(.easeIn(duration: 0.3)) {
-                    showLikeDislike = true
-                }
             }
         }
     }

@@ -91,3 +91,40 @@ struct CategorySelectionRow: View {
     }
 }
 
+// MARK: - Rainbow Spinner
+struct RainbowSpinner: View {
+    @State private var rotation: Double = 0
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .trim(from: 0, to: 0.7)
+                .stroke(
+                    AngularGradient(
+                        gradient: Gradient(colors: [
+                            Color(red: 1.0, green: 0.9, blue: 0.2),   // Yellow
+                            Color(red: 1.0, green: 0.6, blue: 0.2),   // Orange
+                            Color(red: 1.0, green: 0.3, blue: 0.6),   // Pink
+                            Color(red: 0.7, green: 0.2, blue: 0.8),   // Purple
+                            Color(red: 0.4, green: 0.4, blue: 1.0),   // Blue-purple
+                            Color(red: 0.2, green: 0.6, blue: 1.0),   // Bright blue
+                            Color(red: 0.1, green: 0.7, blue: 1.0),   // Clear blue
+                            Color(red: 1.0, green: 0.9, blue: 0.2)    // Back to yellow
+                        ]),
+                        center: .center,
+                        startAngle: .degrees(0),
+                        endAngle: .degrees(360)
+                    ),
+                    style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                )
+                .frame(width: 60, height: 60)
+                .rotationEffect(.degrees(rotation))
+                .onAppear {
+                    withAnimation(.linear(duration: 1.0).repeatForever(autoreverses: false)) {
+                        rotation = 360
+                    }
+                }
+        }
+    }
+}
+
