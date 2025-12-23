@@ -61,6 +61,11 @@ class CustomCategoryService: ObservableObject {
                       let createdAt = entity.value(forKey: "createdAt") as? Date else {
                     return nil
                 }
+                // Skip rejected questions - they shouldn't appear in playable deck
+                let isRejected = entity.value(forKey: "isRejected") as? Bool ?? false
+                if isRejected {
+                    return nil
+                }
                 return SavedQuestion(
                     id: id,
                     question: question,
@@ -161,6 +166,7 @@ class CustomCategoryService: ObservableObject {
             questionEntity.setValue(UUID(), forKey: "id")
             questionEntity.setValue(question, forKey: "question")
             questionEntity.setValue(Date(), forKey: "createdAt")
+            questionEntity.setValue(false, forKey: "isRejected")  // New questions are not rejected
             questionEntity.setValue(categoryEntity, forKey: "category")
             
             try context.save()
@@ -169,6 +175,61 @@ class CustomCategoryService: ObservableObject {
         } catch {
             print("Failed to save question: \(error)")
             return false
+        }
+    }
+    
+    // MARK: - Reject Question
+    
+    /// Marks a question as rejected and keeps only the 20 most recent rejected questions per category
+    func rejectQuestion(_ question: String, in categoryId: UUID) {
+        // Find the category
+        let categoryRequest: NSFetchRequest<CustomCategoryEntity> = CustomCategoryEntity.fetchRequest()
+        categoryRequest.predicate = NSPredicate(format: "id == %@", categoryId as CVarArg)
+        
+        do {
+            guard let categoryEntity = try context.fetch(categoryRequest).first else {
+                return
+            }
+            
+            // Try to find existing question and mark it as rejected
+            let questionRequest: NSFetchRequest<SavedQuestionEntity> = SavedQuestionEntity.fetchRequest()
+            questionRequest.predicate = NSPredicate(format: "category == %@", categoryEntity)
+            
+            let questions = try context.fetch(questionRequest)
+            if let existingQuestion = questions.first(where: { ($0.value(forKey: "question") as? String) == question }) {
+                // Mark existing question as rejected
+                existingQuestion.setValue(true, forKey: "isRejected")
+                existingQuestion.setValue(Date(), forKey: "rejectedAt")
+            } else {
+                // Create new rejected question entry
+                let questionEntity = SavedQuestionEntity(context: context)
+                questionEntity.setValue(UUID(), forKey: "id")
+                questionEntity.setValue(question, forKey: "question")
+                questionEntity.setValue(Date(), forKey: "createdAt")
+                questionEntity.setValue(true, forKey: "isRejected")
+                questionEntity.setValue(Date(), forKey: "rejectedAt")
+                questionEntity.setValue(categoryEntity, forKey: "category")
+            }
+            
+            // Keep only the 20 most recent rejected questions for this category
+            let rejectedRequest: NSFetchRequest<SavedQuestionEntity> = SavedQuestionEntity.fetchRequest()
+            rejectedRequest.predicate = NSPredicate(format: "category == %@ AND isRejected == YES", categoryEntity)
+            rejectedRequest.sortDescriptors = [NSSortDescriptor(key: "rejectedAt", ascending: false)]
+            
+            let rejectedQuestions = try context.fetch(rejectedRequest)
+            if rejectedQuestions.count > 20 {
+                // Delete the oldest rejected questions beyond the 20 most recent
+                let questionsToDelete = Array(rejectedQuestions.dropFirst(20))
+                for questionEntity in questionsToDelete {
+                    context.delete(questionEntity)
+                }
+            }
+            
+            try context.save()
+            loadCategories()  // Reload to update the view
+            print("Successfully rejected question in custom category")
+        } catch {
+            print("Failed to reject question: \(error)")
         }
     }
     

@@ -9,7 +9,9 @@
     <entity name="SavedQuestionEntity" representedClassName="SavedQuestionEntity" syncable="YES" codeGenerationType="class">
         <attribute name="createdAt" attributeType="Date" defaultDateTimeInterval="787119720" usesScalarValueType="NO"/>
         <attribute name="id" attributeType="UUID" defaultValueString="00000000-0000-0000-0000-000000000000" usesScalarValueType="NO"/>
+        <attribute name="isRejected" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="question" attributeType="String" defaultValueString=""/>
+        <attribute name="rejectedAt" attributeType="Date" optional="YES" usesScalarValueType="NO"/>
         <relationship name="category" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CustomCategoryEntity" inverseName="questions" inverseEntity="CustomCategoryEntity"/>
     </entity>
     <entity name="DefaultCategoryQuestionEntity" representedClassName="DefaultCategoryQuestionEntity" syncable="YES" codeGenerationType="class">
@@ -17,6 +19,8 @@
         <attribute name="createdAt" attributeType="Date" defaultDateTimeInterval="787119720" usesScalarValueType="NO"/>
         <attribute name="id" attributeType="UUID" defaultValueString="00000000-0000-0000-0000-000000000000" usesScalarValueType="NO"/>
         <attribute name="isGenerated" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="isRejected" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="question" attributeType="String" defaultValueString=""/>
+        <attribute name="rejectedAt" attributeType="Date" optional="YES" usesScalarValueType="NO"/>
     </entity>
 </model>

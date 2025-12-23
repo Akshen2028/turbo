@@ -63,7 +63,8 @@ class DefaultCategoryService: ObservableObject {
     
     func loadQuestions(for categoryId: Int) -> [String] {
         let request: NSFetchRequest<DefaultCategoryQuestionEntity> = DefaultCategoryQuestionEntity.fetchRequest()
-        request.predicate = NSPredicate(format: "categoryId == %d", Int32(categoryId))
+        // Exclude rejected questions from playable deck
+        request.predicate = NSPredicate(format: "categoryId == %d AND (isRejected == NO OR isRejected == nil)", Int32(categoryId))
         request.sortDescriptors = [
             NSSortDescriptor(keyPath: \DefaultCategoryQuestionEntity.isGenerated, ascending: true),
             NSSortDescriptor(keyPath: \DefaultCategoryQuestionEntity.createdAt, ascending: false)
@@ -87,12 +88,60 @@ class DefaultCategoryService: ObservableObject {
         entity.question = question
         entity.createdAt = Date()
         entity.isGenerated = true
+        entity.isRejected = false
         
         do {
             try context.save()
             print("Successfully saved generated question to category \(categoryId)")
         } catch {
             print("Failed to save generated question: \(error)")
+        }
+    }
+    
+    // MARK: - Reject Question
+    
+    /// Marks a question as rejected and keeps only the 20 most recent rejected questions per category
+    func rejectQuestion(_ question: String, in categoryId: Int) {
+        // First, try to find existing question and mark it as rejected
+        let request: NSFetchRequest<DefaultCategoryQuestionEntity> = DefaultCategoryQuestionEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "categoryId == %d AND question == %@", Int32(categoryId), question)
+        
+        do {
+            let entities = try context.fetch(request)
+            if let existingEntity = entities.first {
+                // Mark existing question as rejected
+                existingEntity.isRejected = true
+                existingEntity.rejectedAt = Date()
+            } else {
+                // Create new rejected question entry
+                let entity = DefaultCategoryQuestionEntity(context: context)
+                entity.id = UUID()
+                entity.categoryId = Int32(categoryId)
+                entity.question = question
+                entity.createdAt = Date()
+                entity.isGenerated = true
+                entity.isRejected = true
+                entity.rejectedAt = Date()
+            }
+            
+            // Keep only the 20 most recent rejected questions for this category
+            let rejectedRequest: NSFetchRequest<DefaultCategoryQuestionEntity> = DefaultCategoryQuestionEntity.fetchRequest()
+            rejectedRequest.predicate = NSPredicate(format: "categoryId == %d AND isRejected == YES", Int32(categoryId))
+            rejectedRequest.sortDescriptors = [NSSortDescriptor(keyPath: \DefaultCategoryQuestionEntity.rejectedAt, ascending: false)]
+            
+            let rejectedEntities = try context.fetch(rejectedRequest)
+            if rejectedEntities.count > 20 {
+                // Delete the oldest rejected questions beyond the 20 most recent
+                let entitiesToDelete = Array(rejectedEntities.dropFirst(20))
+                for entity in entitiesToDelete {
+                    context.delete(entity)
+                }
+            }
+            
+            try context.save()
+            print("Successfully rejected question in category \(categoryId)")
+        } catch {
+            print("Failed to reject question: \(error)")
         }
     }
 }

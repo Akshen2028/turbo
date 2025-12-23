@@ -482,6 +482,13 @@ struct QuestionView: View {
     private func handleDislike() {
         guard let question = generatedQuestion else { return }
         
+        // Save rejected question to Core Data (keeps 20 most recent per category)
+        if category.isCustom, let customCategoryId = category.customCategoryId {
+            categoryService.rejectQuestion(question, in: customCategoryId)
+        } else if !category.isCustom {
+            defaultCategoryService.rejectQuestion(question, in: category.id)
+        }
+        
         // Fade away and return to the current question
         withAnimation(.easeOut(duration: 0.3)) {
             showLikeDislike = false
