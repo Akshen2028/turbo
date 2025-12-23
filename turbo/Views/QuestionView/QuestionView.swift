@@ -227,8 +227,9 @@ struct QuestionView: View {
             // Generated question overlay with like/dislike
             if let generatedQuestion = generatedQuestion, showLikeDislike {
                 ZStack {
-                    // Semi-transparent background
-                    Color.black.opacity(0.3)
+                    // Blurred background using Material
+                    Rectangle()
+                        .fill(.ultraThinMaterial)
                         .ignoresSafeArea()
                     
                     VStack {
@@ -242,6 +243,24 @@ struct QuestionView: View {
                             CardView(card: Card(q: generatedQuestion), animation: animation)
                                 .frame(width: viewModel.cardWidth(), height: 400)
                                 .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                                .shadow(
+                                    color: Color(hue: glowHue.truncatingRemainder(dividingBy: 1.0), saturation: 1.0, brightness: 1.0).opacity(0.8),
+                                    radius: shadowRadius,
+                                    x: 0,
+                                    y: 0
+                                )
+                                .shadow(
+                                    color: Color(hue: (glowHue + 0.15).truncatingRemainder(dividingBy: 1.0), saturation: 1.0, brightness: 1.0).opacity(0.6),
+                                    radius: shadowRadius * 1.3,
+                                    x: 0,
+                                    y: 0
+                                )
+                                .shadow(
+                                    color: Color(hue: (glowHue + 0.3).truncatingRemainder(dividingBy: 1.0), saturation: 1.0, brightness: 1.0).opacity(0.4),
+                                    radius: shadowRadius * 1.6,
+                                    x: 0,
+                                    y: 0
+                                )
                             Spacer(minLength: 0)
                         }
                         .frame(height: 400)
