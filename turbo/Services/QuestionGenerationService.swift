@@ -53,11 +53,11 @@ class QuestionGenerationService: ObservableObject {
     // MARK: - Generate Question
     
     /// Generates a question using OpenAI API
-    /// - Parameter categoryName: The name of the category (not used in initial implementation)
+    /// - Parameter categoryName: The name of the category
     /// - Returns: A generated question string
     func generateQuestion(for categoryName: String) async -> String {
-        // Add variation to the prompt to ensure different questions each time
-        let prompt = "Give me a new and unique conversation starting question. Make it different from previous questions."
+        // Add variation to the prompt to ensure different questions each time, including category context
+        let prompt = "Give me a new and unique conversation starting question in the \(categoryName) category."
         
         do {
             let question = try await callOpenAIAPI(prompt: prompt)
