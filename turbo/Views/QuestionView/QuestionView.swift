@@ -23,6 +23,12 @@ struct QuestionView: View {
     @State private var generatedQuestion: String? = nil
     @State private var isGenerating = false
     @State private var showLikeDislike = false
+    
+    // Shimmer animation state
+    @State private var shimmerOffset: CGFloat = -200
+    @State private var glowHue: Double = 0.6  // Start in blue/purple range
+    @State private var shadowRadius: CGFloat = 8.0
+    @State private var hueTimer: Timer?
 
     // Background animation state
     private let itemsPerRow = 6
@@ -129,8 +135,7 @@ struct QuestionView: View {
                 }
                 .padding(.top, 25)
                 .padding(.horizontal, 30)
-
-                Spacer()
+                .padding(.bottom, 30)
 
                 // Navigation buttons - left and right
                 HStack(spacing: 40) {
@@ -142,24 +147,76 @@ struct QuestionView: View {
                         viewModel.goToNext()
                     }
                 }
+                .padding(.bottom, 30)
                 
                 // Generate Question button
                 Button(action: {
                     generateQuestion()
                 }) {
-                    Text("Generate Question")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 25)
-                                .fill(Color(red: 55/255, green: 213/255, blue: 209/255))
-                        )
+                    ZStack {
+                        // Rainbow gradient background (matching app icon style with more blue)
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        Color(red: 1.0, green: 0.9, blue: 0.2),   // Yellow
+                                        Color(red: 1.0, green: 0.6, blue: 0.2),   // Orange
+                                        Color(red: 1.0, green: 0.3, blue: 0.6),   // Pink
+                                        Color(red: 0.7, green: 0.2, blue: 0.8),   // Purple
+                                        Color(red: 0.4, green: 0.4, blue: 1.0),   // Blue-purple
+                                        Color(red: 0.2, green: 0.6, blue: 1.0),   // Bright blue
+                                        Color(red: 0.1, green: 0.7, blue: 1.0)    // Clear blue
+                                    ]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                        
+                        // Shimmer overlay
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(
+                                LinearGradient(
+                                    gradient: Gradient(stops: [
+                                        .init(color: .clear, location: 0),
+                                        .init(color: .white.opacity(0.4), location: 0.5),
+                                        .init(color: .clear, location: 1)
+                                    ]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .offset(x: shimmerOffset)
+                            .mask(
+                                RoundedRectangle(cornerRadius: 20)
+                            )
+                        
+                        // Button text
+                        Text("Generate Question")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                    .frame(width: 180, height: 50)
+                    .shadow(
+                        color: Color(hue: glowHue.truncatingRemainder(dividingBy: 1.0), saturation: 1.0, brightness: 1.0).opacity(0.8),
+                        radius: shadowRadius,
+                        x: 0,
+                        y: 0
+                    )
+                    .shadow(
+                        color: Color(hue: (glowHue + 0.15).truncatingRemainder(dividingBy: 1.0), saturation: 1.0, brightness: 1.0).opacity(0.6),
+                        radius: shadowRadius * 1.3,
+                        x: 0,
+                        y: 0
+                    )
+                    .shadow(
+                        color: Color(hue: (glowHue + 0.3).truncatingRemainder(dividingBy: 1.0), saturation: 1.0, brightness: 1.0).opacity(0.4),
+                        radius: shadowRadius * 1.6,
+                        x: 0,
+                        y: 0
+                    )
                 }
                 .disabled(isGenerating)
                 .opacity(isGenerating ? 0.6 : 1.0)
-                .padding(.top, 20)
                 
                 Spacer()
                 Spacer()
@@ -272,6 +329,13 @@ struct QuestionView: View {
             if viewModel.cards.isEmpty {
                 viewModel.loadCards()
             }
+            // Start shimmer animation
+            startShimmerAnimation()
+        }
+        .onDisappear {
+            // Clean up timer when view disappears
+            hueTimer?.invalidate()
+            hueTimer = nil
         }
         .navigationTitle(category.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -384,6 +448,40 @@ struct QuestionView: View {
             await MainActor.run {
                 generatedQuestion = nil
             }
+        }
+    }
+    
+    // MARK: - Shimmer Animation
+    
+    private func startShimmerAnimation() {
+        // Reset to start position
+        shimmerOffset = -200
+        
+        // Animate shimmer across the button
+        withAnimation(
+            Animation.linear(duration: 2.0)
+                .repeatForever(autoreverses: false)
+        ) {
+            shimmerOffset = 400
+        }
+        
+        // Animate glow hue cycling through rainbow colors using Timer
+        // This ensures it cycles through all colors including orange, yellow, red
+        glowHue = 0.6  // Start at blue
+        
+        hueTimer?.invalidate()
+        hueTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
+            Task { @MainActor in
+                glowHue = (glowHue + 0.01).truncatingRemainder(dividingBy: 1.0)
+            }
+        }
+        
+        // Animate shadow pulsing (bigger and smaller)
+        withAnimation(
+            Animation.easeInOut(duration: 2.0)
+                .repeatForever(autoreverses: true)
+        ) {
+            shadowRadius = 14.0
         }
     }
 }
