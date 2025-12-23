@@ -132,34 +132,41 @@ struct QuestionView: View {
                         viewModel.goToNext()
                     }
                 }
-                
-                // Edit button for custom categories (jump to category detail to manage/delete)
-                if let customCategory = categoryService.customCategories.first(where: { $0.id == category.customCategoryId }) {
-                    NavigationLink {
-                        CustomCategoryDetailView(category: customCategory, onCategoryDeleted: {
-                            // Dismiss QuestionView after deleting category (no animation to avoid flicker)
-                            let transaction = Transaction(animation: .none)
-                            withTransaction(transaction) {
-                                dismiss()
-                            }
-                        })
-                    } label: {
-                        Image(systemName: "pencil.circle.fill")
-                            .font(.system(size: 56, weight: .bold))
-                            .foregroundColor(.white)
-                            .background(
-                                Circle()
-                                    .fill(Color(red: 55/255, green: 213/255, blue: 209/255))
-                                    .frame(width: 48, height: 48)
-                            )
-                            .padding(.top, 30)
+                Spacer()
+                Spacer()
+                Spacer()
+                Spacer()
+            }
+
+            // Edit button for custom categories (bottom right corner)
+            if let customCategory = categoryService.customCategories.first(where: { $0.id == category.customCategoryId }) {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        NavigationLink {
+                            CustomCategoryDetailView(category: customCategory, onCategoryDeleted: {
+                                // Dismiss QuestionView after deleting category (no animation to avoid flicker)
+                                let transaction = Transaction(animation: .none)
+                                withTransaction(transaction) {
+                                    dismiss()
+                                }
+                            })
+                        } label: {
+                            Image(systemName: "pencil.circle.fill")
+                                .font(.system(size: 56, weight: .bold))
+                                .foregroundColor(.white)
+                                .background(
+                                    Circle()
+                                        .fill(Color(red: 55/255, green: 213/255, blue: 209/255))
+                                        .frame(width: 48, height: 48)
+                                )
+                        }
+                        .padding(.trailing, 40)
+                        .padding(.bottom, 150)
                     }
                 }
-
-                Spacer()
-                Spacer()
-                Spacer()
-                Spacer()
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
             }
         }
         .onAppear {
