@@ -25,13 +25,20 @@ class QuestionViewModel: ObservableObject {
             setupServiceObservation()
         }
     }
+    var defaultCategoryService: DefaultCategoryService? {
+        didSet {
+            loadCards()
+        }
+    }
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Init
 
     init(category: Category) {
         self.category = category
-        loadCards()
+        // Initialize with starter card immediately to prevent fade-in
+        let starter = Card(q: "Swipe left for a question...")
+        cards = [starter]
     }
     
     // MARK: - Service Observation
@@ -67,9 +74,14 @@ class QuestionViewModel: ObservableObject {
 
     // MARK: - Load cards for category (from old CarouselViewModel)
 
-    private func loadCards() {
-        // "Swipe left" starter card
-        let starter = Card(q: "Swipe left for a question...")
+    func loadCards() {
+        // If we already have the starter card, keep it; otherwise create it
+        let starter: Card
+        if let existingStarter = cards.first, existingStarter.q == "Swipe left for a question..." {
+            starter = existingStarter
+        } else {
+            starter = Card(q: "Swipe left for a question...")
+        }
 
         let categoryCards: [Card]
         
@@ -78,27 +90,41 @@ class QuestionViewModel: ObservableObject {
             // Load from custom category
             categoryCards = loadCustomCategoryQuestions(categoryId: customCategoryId)
         } else {
-            // Load from regular categories
-        switch category.id {
-        case 0: // Family
-            categoryCards = QuestionData.familyQuestions.shuffled().map { Card(q: $0) }
-        case 1: // Relationships
-            categoryCards = QuestionData.relationshipQuestions.shuffled().map { Card(q: $0) }
-        case 2: // Friends
-            categoryCards = QuestionData.friendQuestions.shuffled().map { Card(q: $0) }
-        case 3: // Icebreakers
-            categoryCards = QuestionData.icebreakerQuestions.shuffled().map { Card(q: $0) }
-        case 4: // Random
-            categoryCards = QuestionData.randomQuestions.shuffled().map { Card(q: $0) }
-        case 5: // Controversial
-            categoryCards = QuestionData.controversialQuestions.shuffled().map { Card(q: $0) }
-        default:
-            categoryCards = []
+            // Load from Core Data for default categories
+            if let defaultService = defaultCategoryService {
+                let questions = defaultService.loadQuestions(for: category.id)
+                categoryCards = questions.shuffled().map { Card(q: $0) }
+            } else {
+                // Fallback to hardcoded questions if service not available
+                categoryCards = loadHardcodedQuestions()
             }
         }
 
-        // Keep starter card at the bottom of the stack
-        cards = [starter] + categoryCards
+        // Update cards without animation to prevent fade
+        var transaction = Transaction(animation: .none)
+        withTransaction(transaction) {
+            // Keep starter card at the bottom of the stack
+            cards = [starter] + categoryCards
+        }
+    }
+    
+    private func loadHardcodedQuestions() -> [Card] {
+        switch category.id {
+        case 0: // Family
+            return QuestionData.familyQuestions.shuffled().map { Card(q: $0) }
+        case 1: // Relationships
+            return QuestionData.relationshipQuestions.shuffled().map { Card(q: $0) }
+        case 2: // Friends
+            return QuestionData.friendQuestions.shuffled().map { Card(q: $0) }
+        case 3: // Icebreakers
+            return QuestionData.icebreakerQuestions.shuffled().map { Card(q: $0) }
+        case 4: // Random
+            return QuestionData.randomQuestions.shuffled().map { Card(q: $0) }
+        case 5: // Controversial
+            return QuestionData.controversialQuestions.shuffled().map { Card(q: $0) }
+        default:
+            return []
+        }
     }
 
     private func loadCustomCategoryQuestions(categoryId: UUID) -> [Card] {
@@ -243,6 +269,49 @@ class QuestionViewModel: ObservableObject {
         return index - swipedCount <= 2
             ? CGFloat(index - swipedCount) * 30
             : 60
+    }
+    
+    // MARK: - Question Generation
+    
+    /// Inserts a new question card at the current position and moves to it
+    /// - Parameter question: The question text to insert
+    func insertQuestion(_ question: String) {
+        let newCard = Card(q: question)
+        // Insert at the position after the current card (swipedCount + 1)
+        let insertIndex = swipedCount + 1
+        if insertIndex <= cards.count {
+            cards.insert(newCard, at: insertIndex)
+        } else {
+            cards.append(newCard)
+        }
+        // Move to the newly inserted question
+        swipedCount = insertIndex
+        // Reset all offsets
+        for index in cards.indices {
+            cards[index].offset = 0
+        }
+        
+        // Save to Core Data
+        if category.isCustom, let customCategoryId = category.customCategoryId, let categoryService = categoryService {
+            // Save to custom category
+            _ = categoryService.saveQuestion(question, to: customCategoryId)
+        } else if !category.isCustom, let defaultService = defaultCategoryService {
+            // Save to default category
+            defaultService.addGeneratedQuestion(question, to: category.id)
+        }
+    }
+    
+    /// Removes the generated question if it was not liked
+    /// - Parameter question: The question text to remove
+    func removeGeneratedQuestion(_ question: String) {
+        // Find and remove the card with this question
+        if let index = cards.firstIndex(where: { $0.q == question && $0.id != cards[0].id }) {
+            cards.remove(at: index)
+            // Adjust swipedCount if we removed a card before the current position
+            if index <= swipedCount {
+                swipedCount = max(0, swipedCount - 1)
+            }
+        }
     }
 }
 

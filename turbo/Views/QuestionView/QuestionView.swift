@@ -15,7 +15,14 @@ struct QuestionView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var categoryService: CustomCategoryService
+    @EnvironmentObject var defaultCategoryService: DefaultCategoryService
     @State private var showingSaveSheet = false
+    
+    // Question generation state
+    @StateObject private var questionGenerationService = QuestionGenerationService()
+    @State private var generatedQuestion: String? = nil
+    @State private var isGenerating = false
+    @State private var showLikeDislike = false
 
     // Background animation state
     private let itemsPerRow = 6
@@ -31,6 +38,7 @@ struct QuestionView: View {
     // Update view model's service reference when the environment object is available
     private func updateViewModelService() {
         viewModel.categoryService = categoryService
+        viewModel.defaultCategoryService = defaultCategoryService
     }
     
     private var currentQuestion: String {
@@ -40,8 +48,10 @@ struct QuestionView: View {
     }
     
     private var isStarterCard: Bool {
+        // If cards are empty, treat it as starter card to prevent bookmark flicker
+        guard !viewModel.cards.isEmpty else { return true }
         let currentIndex = viewModel.swipedCount
-        guard currentIndex < viewModel.cards.count else { return false }
+        guard currentIndex < viewModel.cards.count else { return true }
         return viewModel.cards[currentIndex].q == "Swipe left for a question..."
     }
 
@@ -132,10 +142,96 @@ struct QuestionView: View {
                         viewModel.goToNext()
                     }
                 }
+                
+                // Generate Question button
+                Button(action: {
+                    generateQuestion()
+                }) {
+                    Text("Generate Question")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 25)
+                                .fill(Color(red: 55/255, green: 213/255, blue: 209/255))
+                        )
+                }
+                .disabled(isGenerating)
+                .opacity(isGenerating ? 0.6 : 1.0)
+                .padding(.top, 20)
+                
                 Spacer()
                 Spacer()
                 Spacer()
                 Spacer()
+            }
+            
+            // Generated question overlay with like/dislike
+            if let generatedQuestion = generatedQuestion, showLikeDislike {
+                ZStack {
+                    // Semi-transparent background
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                    
+                    VStack {
+                        Spacer()
+                        Spacer()
+                        Spacer()
+                        
+                        // Generated question card (positioned like current card)
+                        HStack {
+                            Spacer()
+                            CardView(card: Card(q: generatedQuestion), animation: animation)
+                                .frame(width: viewModel.cardWidth(), height: 400)
+                                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                            Spacer(minLength: 0)
+                        }
+                        .frame(height: 400)
+                        .padding(.top, 25)
+                        .padding(.horizontal, 30)
+                        
+                        Spacer()
+                        
+                        // Like/Dislike buttons
+                        HStack(spacing: 40) {
+                            // Dislike button
+                            Button(action: {
+                                handleDislike()
+                            }) {
+                                Image(systemName: "hand.thumbsdown.fill")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.white)
+                                    .frame(width: 70, height: 70)
+                                    .background(
+                                        Circle()
+                                            .fill(Color.red)
+                                    )
+                            }
+                            
+                            // Like button
+                            Button(action: {
+                                handleLike()
+                            }) {
+                                Image(systemName: "hand.thumbsup.fill")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.white)
+                                    .frame(width: 70, height: 70)
+                                    .background(
+                                        Circle()
+                                            .fill(Color.green)
+                                    )
+                            }
+                        }
+                        .padding(.top, 20)
+                        
+                        Spacer()
+                        Spacer()
+                        Spacer()
+                        Spacer()
+                    }
+                }
+                .zIndex(1000)
             }
 
             // Edit button for custom categories (bottom right corner)
@@ -172,6 +268,10 @@ struct QuestionView: View {
         .onAppear {
             // Update view model with the shared service instance
             updateViewModelService()
+            // Ensure cards are loaded if not already
+            if viewModel.cards.isEmpty {
+                viewModel.loadCards()
+            }
         }
         .navigationTitle(category.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -234,6 +334,57 @@ struct QuestionView: View {
     private func getNumberOfRows() -> Int {
         let heightPerItem = UIScreen.main.bounds.width / CGFloat(itemsPerRow)
         return Int(UIScreen.main.bounds.height / heightPerItem) + 1
+    }
+    
+    // MARK: - Question Generation
+    
+    private func generateQuestion() {
+        guard !isGenerating else { return }
+        
+        isGenerating = true
+        
+        Task {
+            let question = await questionGenerationService.generateQuestion(for: category.name)
+            
+            await MainActor.run {
+                generatedQuestion = question
+                isGenerating = false
+                
+                // Fade in the question and like/dislike buttons
+                withAnimation(.easeIn(duration: 0.3)) {
+                    showLikeDislike = true
+                }
+            }
+        }
+    }
+    
+    private func handleLike() {
+        guard let question = generatedQuestion else { return }
+        
+        // Insert the question into the deck at the current position
+        withAnimation(.easeInOut(duration: 0.3)) {
+            viewModel.insertQuestion(question)
+            // Hide the overlay
+            showLikeDislike = false
+            generatedQuestion = nil
+        }
+    }
+    
+    private func handleDislike() {
+        guard let question = generatedQuestion else { return }
+        
+        // Fade away and return to the current question
+        withAnimation(.easeOut(duration: 0.3)) {
+            showLikeDislike = false
+        }
+        
+        // Clear the generated question after animation completes
+        Task {
+            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+            await MainActor.run {
+                generatedQuestion = nil
+            }
+        }
     }
 }
 

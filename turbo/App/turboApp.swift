@@ -34,6 +34,7 @@ struct turboApp: App {
             HomeView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
                 .environmentObject(CustomCategoryService(context: persistenceController.container.viewContext))
+                .environmentObject(DefaultCategoryService(context: persistenceController.container.viewContext))
         }
     }
 }
