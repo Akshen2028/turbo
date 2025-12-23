@@ -424,6 +424,14 @@ struct QuestionView: View {
     private func generateQuestion() {
         guard !isGenerating else { return }
         
+        // Clear any existing generated question first
+        if showLikeDislike {
+            withAnimation(.easeOut(duration: 0.2)) {
+                showLikeDislike = false
+            }
+        }
+        generatedQuestion = nil
+        
         isGenerating = true
         
         Task {
