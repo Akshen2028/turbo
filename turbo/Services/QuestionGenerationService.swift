@@ -57,25 +57,50 @@ class QuestionGenerationService: ObservableObject {
     ///   - categoryName: The name of the category
     ///   - likedQuestions: Up to 10 recently liked questions to understand user preferences
     ///   - dislikedQuestions: Up to 10 recently disliked questions to avoid similar content
+    ///   - dislikedQuestionsWithReasons: Up to 10 recently disliked questions with their rejection reasons
     /// - Returns: A generated question string
-    func generateQuestion(for categoryName: String, likedQuestions: [String] = [], dislikedQuestions: [String] = []) async -> String {
+    func generateQuestion(for categoryName: String, likedQuestions: [String] = [], dislikedQuestions: [String] = [], dislikedQuestionsWithReasons: [(question: String, reason: String?)] = []) async -> String {
         // Build prompt with category context and user preferences
-        var prompt = "Give me a simple, concise conversation starting question in the \(categoryName) category. The question should be thought-provoking but easy to understand - keep it short and direct, not overly complex or wordy. It should spark meaningful conversation while being straightforward."
+        var prompt = "Give me a simple, concise conversation starting question in the \(categoryName) category. The question should be thought-provoking but easy to understand - keep it concise and direct, not overly complex unless the user has explicitly asked for a more complex question. It should spark meaningful conversation while being straightforward."
         
-        // Include liked questions to understand user preferences
-        if !likedQuestions.isEmpty {
-            let likedList = likedQuestions.prefix(10).map { "\"\($0)\"" }.joined(separator: ", ")
-            prompt += " Here are examples of questions the user has liked in this category: \(likedList). Use these as inspiration for the style and topics the user enjoys. However, note that these questions have already been asked, so do not generate questions identical or very similar to them."
+        // Check if user has marked at least 5 questions as "Too complex"
+        let tooComplexCount = dislikedQuestionsWithReasons.filter { $0.reason == "Too complex" }.count
+        if tooComplexCount >= 5 {
+            prompt += " Note: The user has marked several questions as too complex, so try to offer shorter, less complex questions while still maintaining depth and meaning."
         }
         
-        // Include disliked questions to avoid similar content
-        if !dislikedQuestions.isEmpty {
-            let dislikedList = dislikedQuestions.prefix(10).map { "\"\($0)\"" }.joined(separator: ", ")
-            prompt += " Here are examples of questions the user has disliked in this category: \(dislikedList). These questions have already been asked and should not be repeated. Avoid generating questions similar to these in topic, style, or approach."
+        // Check if user has marked at least 5 questions as "Too simple"
+        let tooSimpleCount = dislikedQuestionsWithReasons.filter { $0.reason == "Too simple" }.count
+        if tooSimpleCount >= 5 {
+            prompt += " Note: The user has marked several questions as too simple, so try to offer slightly more complex, deeper questions that require more thought and reflection."
+        }
+        
+        // Include liked questions
+        if !likedQuestions.isEmpty {
+            let likedList = likedQuestions.prefix(10).map { "\"\($0)\"" }.joined(separator: ", ")
+            prompt += " Recently liked questions: \(likedList)"
+        }
+        
+        // Include disliked questions with their reasons
+        if !dislikedQuestionsWithReasons.isEmpty {
+            let dislikedList = dislikedQuestionsWithReasons.prefix(10).map { item in
+                if let reason = item.reason {
+                    return "\"\(item.question)\" because it was \(reason)"
+                } else {
+                    return "\"\(item.question)\""
+                }
+            }.joined(separator: ", ")
+            prompt += " Recently disliked questions: \(dislikedList)"
+        }
+        
+        // Final instruction
+        if !likedQuestions.isEmpty || !dislikedQuestionsWithReasons.isEmpty {
+            prompt += " These are questions that the user has already generated before, so don't repeat them."
         }
         
         do {
             let question = try await callOpenAIAPI(prompt: prompt)
+            print("prompt: \(prompt)")
             return question
         } catch QuestionGenerationError.httpError(429) {
             print("❌ API quota exceeded (429). Please check your API key usage or credits.")

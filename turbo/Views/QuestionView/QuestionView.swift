@@ -23,6 +23,7 @@ struct QuestionView: View {
     @State private var generatedQuestion: String? = nil
     @State private var isGenerating = false
     @State private var showLikeDislike = false
+    @State private var showDislikeFeedback = false
     
     // Shimmer animation state
     @State private var shimmerOffset: CGFloat = -200
@@ -289,7 +290,9 @@ struct QuestionView: View {
                         HStack(spacing: 40) {
                             // Dislike button
                             Button(action: {
-                                handleDislike()
+                                withAnimation(.easeIn(duration: 0.2)) {
+                                    showDislikeFeedback = true
+                                }
                             }) {
                                 Image(systemName: "hand.thumbsdown.fill")
                                     .font(.system(size: 40))
@@ -326,6 +329,89 @@ struct QuestionView: View {
                     }
                 }
                 .zIndex(1000)
+            }
+            
+            // Dislike feedback overlay
+            if showDislikeFeedback {
+                ZStack {
+                    // Blurred background using Material - tappable to dismiss
+                    Rectangle()
+                        .fill(.ultraThinMaterial)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                showDislikeFeedback = false
+                            }
+                        }
+                    
+                    VStack(spacing: 30) {
+                        // Heading
+                        Text("What was wrong with this question?")
+                            .font(.system(size: 24, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+                        
+                        // Feedback buttons
+                        VStack(spacing: 20) {
+                            Button(action: {
+                                handleDislikeFeedback(reason: "Repetitive")
+                            }) {
+                                Text("Repetitive")
+                                    .font(.system(size: 22, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 250, height: 65)
+                                    .background(
+                                        Color(red: 55/255, green: 213/255, blue: 209/255)
+                                    )
+                                    .cornerRadius(40)
+                                    .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 4)
+                            }
+                            
+                            Button(action: {
+                                handleDislikeFeedback(reason: "Not my style")
+                            }) {
+                                Text("Not my style")
+                                    .font(.system(size: 22, weight: .semibold))
+                                    .foregroundColor(Color(red: 55/255, green: 213/255, blue: 209/255))
+                                    .frame(width: 250, height: 65)
+                                    .background(Color.white)
+                                    .cornerRadius(40)
+                                    .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 4)
+                            }
+                            
+                            Button(action: {
+                                handleDislikeFeedback(reason: "Too complex")
+                            }) {
+                                Text("Too complex")
+                                    .font(.system(size: 22, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 250, height: 65)
+                                    .background(
+                                        Color(red: 55/255, green: 213/255, blue: 209/255)
+                                    )
+                                    .cornerRadius(40)
+                                    .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 4)
+                            }
+                            
+                            Button(action: {
+                                handleDislikeFeedback(reason: "Too simple")
+                            }) {
+                                Text("Too simple")
+                                    .font(.system(size: 22, weight: .semibold))
+                                    .foregroundColor(Color(red: 55/255, green: 213/255, blue: 209/255))
+                                    .frame(width: 250, height: 65)
+                                    .background(Color.white)
+                                    .cornerRadius(40)
+                                    .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 4)
+                            }
+                        }
+                        .padding(.horizontal, 40)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .zIndex(1001)
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
             }
 
             // Edit button for custom categories (bottom right corner)
@@ -377,7 +463,7 @@ struct QuestionView: View {
         .navigationTitle(category.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if !isStarterCard {
+            if !isStarterCard && !showDislikeFeedback {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         showingSaveSheet = true
@@ -461,16 +547,19 @@ struct QuestionView: View {
             // Get recent liked and disliked questions to tailor generation to user preferences
             let likedQuestions: [String]
             let dislikedQuestions: [String]
+            let dislikedQuestionsWithReasons: [(question: String, reason: String?)]
             
             if category.isCustom, let customCategoryId = category.customCategoryId {
                 likedQuestions = categoryService.getRecentLikedQuestions(for: customCategoryId, limit: 10)
                 dislikedQuestions = categoryService.getRecentDislikedQuestions(for: customCategoryId, limit: 10)
+                dislikedQuestionsWithReasons = categoryService.getRecentDislikedQuestionsWithReasons(for: customCategoryId, limit: 10)
             } else {
                 likedQuestions = defaultCategoryService.getRecentLikedQuestions(for: category.id, limit: 10)
                 dislikedQuestions = defaultCategoryService.getRecentDislikedQuestions(for: category.id, limit: 10)
+                dislikedQuestionsWithReasons = defaultCategoryService.getRecentDislikedQuestionsWithReasons(for: category.id, limit: 10)
             }
             
-            let question = await questionGenerationService.generateQuestion(for: category.name, likedQuestions: likedQuestions, dislikedQuestions: dislikedQuestions)
+            let question = await questionGenerationService.generateQuestion(for: category.name, likedQuestions: likedQuestions, dislikedQuestions: dislikedQuestions, dislikedQuestionsWithReasons: dislikedQuestionsWithReasons)
             
             await MainActor.run {
                 generatedQuestion = question
@@ -491,19 +580,29 @@ struct QuestionView: View {
         }
     }
     
-    private func handleDislike() {
+    private func handleDislikeFeedback(reason: String) {
         guard let question = generatedQuestion else { return }
         
-        // Save rejected question to Core Data (keeps 20 most recent per category)
+        // Save rejected question to Core Data with reason (keeps 20 most recent per category)
         if category.isCustom, let customCategoryId = category.customCategoryId {
-            categoryService.rejectQuestion(question, in: customCategoryId)
+            categoryService.rejectQuestion(question, in: customCategoryId, reason: reason)
         } else if !category.isCustom {
-            defaultCategoryService.rejectQuestion(question, in: category.id)
+            defaultCategoryService.rejectQuestion(question, in: category.id, reason: reason)
         }
         
-        // Fade away and return to the current question
-        withAnimation(.easeOut(duration: 0.3)) {
-            showLikeDislike = false
+        // Hide feedback modal first, then main overlay
+        withAnimation(.easeOut(duration: 0.2)) {
+            showDislikeFeedback = false
+        }
+        
+        // Small delay before hiding main overlay
+        Task {
+            try? await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
+            await MainActor.run {
+                withAnimation(.easeOut(duration: 0.3)) {
+                    showLikeDislike = false
+                }
+            }
         }
         
         // Clear the generated question after animation completes

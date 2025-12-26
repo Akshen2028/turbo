@@ -12,6 +12,7 @@
         <attribute name="isRejected" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="question" attributeType="String" defaultValueString=""/>
         <attribute name="rejectedAt" attributeType="Date" optional="YES" usesScalarValueType="NO"/>
+        <attribute name="rejectionReason" attributeType="String" optional="YES" usesScalarValueType="NO"/>
         <relationship name="category" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CustomCategoryEntity" inverseName="questions" inverseEntity="CustomCategoryEntity"/>
     </entity>
     <entity name="DefaultCategoryQuestionEntity" representedClassName="DefaultCategoryQuestionEntity" syncable="YES" codeGenerationType="class">
@@ -22,5 +23,6 @@
         <attribute name="isRejected" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="question" attributeType="String" defaultValueString=""/>
         <attribute name="rejectedAt" attributeType="Date" optional="YES" usesScalarValueType="NO"/>
+        <attribute name="rejectionReason" attributeType="String" optional="YES" usesScalarValueType="NO"/>
     </entity>
 </model>

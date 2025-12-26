@@ -197,6 +197,36 @@ class CustomCategoryService: ObservableObject {
         }
     }
     
+    /// Returns up to the specified number of most recent rejected questions with their reasons for the category
+    func getRecentDislikedQuestionsWithReasons(for categoryId: UUID, limit: Int = 10) -> [(question: String, reason: String?)] {
+        let categoryRequest: NSFetchRequest<CustomCategoryEntity> = CustomCategoryEntity.fetchRequest()
+        categoryRequest.predicate = NSPredicate(format: "id == %@", categoryId as CVarArg)
+        
+        do {
+            guard let categoryEntity = try context.fetch(categoryRequest).first else {
+                return []
+            }
+            
+            let request: NSFetchRequest<SavedQuestionEntity> = SavedQuestionEntity.fetchRequest()
+            // Get rejected questions, sorted by rejection date descending
+            request.predicate = NSPredicate(format: "category == %@ AND isRejected == YES", categoryEntity)
+            request.sortDescriptors = [NSSortDescriptor(key: "rejectedAt", ascending: false)]
+            request.fetchLimit = limit
+            
+            let questions = try context.fetch(request)
+            return questions.compactMap { entity in
+                guard let question = entity.value(forKey: "question") as? String else {
+                    return nil
+                }
+                let reason = entity.value(forKey: "rejectionReason") as? String
+                return (question: question, reason: reason)
+            }
+        } catch {
+            print("Failed to get recent disliked questions with reasons: \(error)")
+            return []
+        }
+    }
+    
     // MARK: - Save Question
     
     func saveQuestion(_ question: String, to categoryId: UUID) -> Bool {
@@ -241,7 +271,7 @@ class CustomCategoryService: ObservableObject {
     // MARK: - Reject Question
     
     /// Marks a question as rejected and keeps only the 20 most recent rejected questions per category
-    func rejectQuestion(_ question: String, in categoryId: UUID) {
+    func rejectQuestion(_ question: String, in categoryId: UUID, reason: String? = nil) {
         // Find the category
         let categoryRequest: NSFetchRequest<CustomCategoryEntity> = CustomCategoryEntity.fetchRequest()
         categoryRequest.predicate = NSPredicate(format: "id == %@", categoryId as CVarArg)
@@ -260,6 +290,7 @@ class CustomCategoryService: ObservableObject {
                 // Mark existing question as rejected
                 existingQuestion.setValue(true, forKey: "isRejected")
                 existingQuestion.setValue(Date(), forKey: "rejectedAt")
+                existingQuestion.setValue(reason, forKey: "rejectionReason")
             } else {
                 // Create new rejected question entry
                 let questionEntity = SavedQuestionEntity(context: context)
@@ -268,6 +299,7 @@ class CustomCategoryService: ObservableObject {
                 questionEntity.setValue(Date(), forKey: "createdAt")
                 questionEntity.setValue(true, forKey: "isRejected")
                 questionEntity.setValue(Date(), forKey: "rejectedAt")
+                questionEntity.setValue(reason, forKey: "rejectionReason")
                 questionEntity.setValue(categoryEntity, forKey: "category")
             }
             

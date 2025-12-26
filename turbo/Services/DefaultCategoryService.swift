@@ -156,6 +156,26 @@ class DefaultCategoryService: ObservableObject {
         }
     }
     
+    /// Returns up to the specified number of most recent generated questions that were rejected with their reasons for the category
+    func getRecentDislikedQuestionsWithReasons(for categoryId: Int, limit: Int = 10) -> [(question: String, reason: String?)] {
+        let request: NSFetchRequest<DefaultCategoryQuestionEntity> = DefaultCategoryQuestionEntity.fetchRequest()
+        // Get generated questions that were rejected, sorted by rejection date descending
+        request.predicate = NSPredicate(format: "categoryId == %d AND isGenerated == YES AND isRejected == YES", Int32(categoryId))
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \DefaultCategoryQuestionEntity.rejectedAt, ascending: false)]
+        request.fetchLimit = limit
+        
+        do {
+            let entities = try context.fetch(request)
+            return entities.compactMap { entity in
+                guard let question = entity.question else { return nil }
+                return (question: question, reason: entity.rejectionReason)
+            }
+        } catch {
+            print("Failed to get recent disliked questions with reasons: \(error)")
+            return []
+        }
+    }
+    
     // MARK: - Add Generated Question
     
     func addGeneratedQuestion(_ question: String, to categoryId: Int) {
@@ -178,7 +198,7 @@ class DefaultCategoryService: ObservableObject {
     // MARK: - Reject Question
     
     /// Marks a question as rejected and keeps only the 20 most recent rejected questions per category
-    func rejectQuestion(_ question: String, in categoryId: Int) {
+    func rejectQuestion(_ question: String, in categoryId: Int, reason: String? = nil) {
         // First, try to find existing question and mark it as rejected
         let request: NSFetchRequest<DefaultCategoryQuestionEntity> = DefaultCategoryQuestionEntity.fetchRequest()
         request.predicate = NSPredicate(format: "categoryId == %d AND question == %@", Int32(categoryId), question)
@@ -189,6 +209,7 @@ class DefaultCategoryService: ObservableObject {
                 // Mark existing question as rejected
                 existingEntity.isRejected = true
                 existingEntity.rejectedAt = Date()
+                existingEntity.rejectionReason = reason
             } else {
                 // Create new rejected question entry
                 let entity = DefaultCategoryQuestionEntity(context: context)
@@ -199,6 +220,7 @@ class DefaultCategoryService: ObservableObject {
                 entity.isGenerated = true
                 entity.isRejected = true
                 entity.rejectedAt = Date()
+                entity.rejectionReason = reason
             }
             
             // Keep only the 20 most recent rejected questions for this category
