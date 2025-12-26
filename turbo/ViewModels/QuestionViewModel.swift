@@ -122,6 +122,8 @@ class QuestionViewModel: ObservableObject {
             return QuestionData.randomQuestions.shuffled().map { Card(q: $0) }
         case 5: // Controversial
             return QuestionData.controversialQuestions.shuffled().map { Card(q: $0) }
+        case 6: // Would You Rather
+            return QuestionData.wouldYouRatherQuestions.shuffled().map { Card(q: $0) }
         default:
             return []
         }
@@ -467,7 +469,7 @@ enum QuestionData {
         "Should human cloning be legal?",
         "Should healthcare be free?",
         "Would you change your future child's genetic makeup if you could?",
-        "What’s the hardest health to keep healthy? Spiritual, mental, emotional, or physical?",
+        "What's the hardest health to keep healthy? Spiritual, mental, emotional, or physical?",
         "Do you think it should be a fundamental right to own firearms?",
         "Do you believe in fate or free will?",
         "Do you believe in the death penalty?",
@@ -485,5 +487,18 @@ enum QuestionData {
         "Should it be mandatory to tip at restaurants?",
         "To what extent should the government have access to your personal information?",
         "Is artificial intelligence more of a threat or a benefit to society?"
+    ]
+    
+    static let wouldYouRatherQuestions: [String] = [
+        "Would you rather have the ability to fly or be invisible?",
+        "Would you rather always be 10 minutes late or always be 20 minutes early?",
+        "Would you rather have unlimited money or unlimited time?",
+        "Would you rather be able to read minds or see into the future?",
+        "Would you rather live without internet or live without air conditioning and heating?",
+        "Would you rather be able to teleport anywhere or be able to read minds?",
+        "Would you rather have super strength or super speed?",
+        "Would you rather always be cold or always be hot?",
+        "Would you rather be famous or be the best friend of someone famous?",
+        "Would you rather have the ability to time travel or have the ability to speak every language in the world?"
     ]
 }

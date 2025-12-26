@@ -18,6 +18,7 @@ class CategoryListViewModel: ObservableObject {
         Category(id: 1, name: "Relationships", imageName: "rose"),
         Category(id: 3, name: "Icebreakers",   imageName: "ice"),
         Category(id: 5, name: "Controversial", imageName: "balance"),
-        Category(id: 4, name: "Random",        imageName: "dices")
+        Category(id: 4, name: "Random",        imageName: "dices"),
+        Category(id: 6, name: "Would You Rather", imageName: "balance")
     ]
 }

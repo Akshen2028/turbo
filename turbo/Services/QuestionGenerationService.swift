@@ -53,11 +53,26 @@ class QuestionGenerationService: ObservableObject {
     // MARK: - Generate Question
     
     /// Generates a question using OpenAI API
-    /// - Parameter categoryName: The name of the category
+    /// - Parameters:
+    ///   - categoryName: The name of the category
+    ///   - likedQuestions: Up to 10 recently liked questions to understand user preferences
+    ///   - dislikedQuestions: Up to 10 recently disliked questions to avoid similar content
     /// - Returns: A generated question string
-    func generateQuestion(for categoryName: String) async -> String {
-        // Add variation to the prompt to ensure different questions each time, including category context
-        let prompt = "Give me a new and unique conversation starting question in the \(categoryName) category."
+    func generateQuestion(for categoryName: String, likedQuestions: [String] = [], dislikedQuestions: [String] = []) async -> String {
+        // Build prompt with category context and user preferences
+        var prompt = "Give me a simple, concise conversation starting question in the \(categoryName) category. The question should be thought-provoking but easy to understand - keep it short and direct, not overly complex or wordy. It should spark meaningful conversation while being straightforward."
+        
+        // Include liked questions to understand user preferences
+        if !likedQuestions.isEmpty {
+            let likedList = likedQuestions.prefix(10).map { "\"\($0)\"" }.joined(separator: ", ")
+            prompt += " Here are examples of questions the user has liked in this category: \(likedList). Use these as inspiration for the style and topics the user enjoys. However, note that these questions have already been asked, so do not generate questions identical or very similar to them."
+        }
+        
+        // Include disliked questions to avoid similar content
+        if !dislikedQuestions.isEmpty {
+            let dislikedList = dislikedQuestions.prefix(10).map { "\"\($0)\"" }.joined(separator: ", ")
+            prompt += " Here are examples of questions the user has disliked in this category: \(dislikedList). These questions have already been asked and should not be repeated. Avoid generating questions similar to these in topic, style, or approach."
+        }
         
         do {
             let question = try await callOpenAIAPI(prompt: prompt)
@@ -102,8 +117,10 @@ class QuestionGenerationService: ObservableObject {
                     "content": prompt
                 ]
             ],
-            "temperature": 1.0,  // Higher temperature for more creative/random responses
-            "max_tokens": 1024
+            "temperature": 1.0,  // Balanced temperature for creative but coherent responses
+            "frequency_penalty": 0.6,  // Moderate penalty for repetition to encourage uniqueness
+            "presence_penalty": 0.4,  // Moderate penalty for topic repetition
+            "max_tokens": 150  // Limit length to encourage shorter, simpler questions
         ]
         
         guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
@@ -154,7 +171,13 @@ class QuestionGenerationService: ObservableObject {
             throw QuestionGenerationError.invalidResponseFormat
         }
         
-        let cleanedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Clean the text: remove whitespace and quotes from start/end
+        var cleanedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Remove quotes from start and end if present
+        if cleanedText.hasPrefix("\"") && cleanedText.hasSuffix("\"") {
+            cleanedText = String(cleanedText.dropFirst().dropLast())
+            cleanedText = cleanedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
         print("✅ [OpenAI] Generated question: \(cleanedText)")
         return cleanedText
     }

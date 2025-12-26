@@ -458,7 +458,19 @@ struct QuestionView: View {
         }
         
         Task {
-            let question = await questionGenerationService.generateQuestion(for: category.name)
+            // Get recent liked and disliked questions to tailor generation to user preferences
+            let likedQuestions: [String]
+            let dislikedQuestions: [String]
+            
+            if category.isCustom, let customCategoryId = category.customCategoryId {
+                likedQuestions = categoryService.getRecentLikedQuestions(for: customCategoryId, limit: 10)
+                dislikedQuestions = categoryService.getRecentDislikedQuestions(for: customCategoryId, limit: 10)
+            } else {
+                likedQuestions = defaultCategoryService.getRecentLikedQuestions(for: category.id, limit: 10)
+                dislikedQuestions = defaultCategoryService.getRecentDislikedQuestions(for: category.id, limit: 10)
+            }
+            
+            let question = await questionGenerationService.generateQuestion(for: category.name, likedQuestions: likedQuestions, dislikedQuestions: dislikedQuestions)
             
             await MainActor.run {
                 generatedQuestion = question

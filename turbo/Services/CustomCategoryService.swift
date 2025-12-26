@@ -137,6 +137,66 @@ class CustomCategoryService: ObservableObject {
         }
     }
     
+    // MARK: - Get Most Recent Generated Liked Question
+    
+    /// Returns the most recent generated question that was liked (not rejected) for the category
+    func getMostRecentGeneratedLikedQuestion(for categoryId: UUID) -> String? {
+        let questions = getRecentLikedQuestions(for: categoryId, limit: 1)
+        return questions.first
+    }
+    
+    /// Returns up to the specified number of most recent questions that were liked (not rejected) for the category
+    func getRecentLikedQuestions(for categoryId: UUID, limit: Int = 10) -> [String] {
+        let categoryRequest: NSFetchRequest<CustomCategoryEntity> = CustomCategoryEntity.fetchRequest()
+        categoryRequest.predicate = NSPredicate(format: "id == %@", categoryId as CVarArg)
+        
+        do {
+            guard let categoryEntity = try context.fetch(categoryRequest).first else {
+                return []
+            }
+            
+            let request: NSFetchRequest<SavedQuestionEntity> = SavedQuestionEntity.fetchRequest()
+            // Get questions that are not rejected, sorted by creation date descending
+            request.predicate = NSPredicate(format: "category == %@ AND (isRejected == NO OR isRejected == nil)", categoryEntity)
+            request.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
+            request.fetchLimit = limit
+            
+            let questions = try context.fetch(request)
+            return questions.compactMap { entity in
+                entity.value(forKey: "question") as? String
+            }
+        } catch {
+            print("Failed to get recent liked questions: \(error)")
+            return []
+        }
+    }
+    
+    /// Returns up to the specified number of most recent rejected questions for the category
+    func getRecentDislikedQuestions(for categoryId: UUID, limit: Int = 10) -> [String] {
+        let categoryRequest: NSFetchRequest<CustomCategoryEntity> = CustomCategoryEntity.fetchRequest()
+        categoryRequest.predicate = NSPredicate(format: "id == %@", categoryId as CVarArg)
+        
+        do {
+            guard let categoryEntity = try context.fetch(categoryRequest).first else {
+                return []
+            }
+            
+            let request: NSFetchRequest<SavedQuestionEntity> = SavedQuestionEntity.fetchRequest()
+            // Get rejected questions, sorted by rejection date descending
+            request.predicate = NSPredicate(format: "category == %@ AND isRejected == YES", categoryEntity)
+            request.sortDescriptors = [NSSortDescriptor(key: "rejectedAt", ascending: false)]
+            request.fetchLimit = limit
+            
+            let questions = try context.fetch(request)
+            return questions.compactMap { entity in
+                entity.value(forKey: "question") as? String
+            }
+        } catch {
+            print("Failed to get recent disliked questions: \(error)")
+            return []
+        }
+    }
+    
     // MARK: - Save Question
     
     func saveQuestion(_ question: String, to categoryId: UUID) -> Bool {

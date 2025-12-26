@@ -24,10 +24,44 @@ class DefaultCategoryService: ObservableObject {
     
     private func seedInitialQuestionsIfNeeded() {
         let hasSeeded = UserDefaults.standard.bool(forKey: seededKey)
+        if !hasSeeded {
+            seedQuestions()
+            UserDefaults.standard.set(true, forKey: seededKey)
+        } else {
+            // Check if Would You Rather category (id: 6) needs to be seeded for existing users
+            seedWouldYouRatherIfNeeded()
+        }
+    }
+    
+    private func seedWouldYouRatherIfNeeded() {
+        let wouldYouRatherSeededKey = "wouldYouRatherSeeded"
+        let hasSeeded = UserDefaults.standard.bool(forKey: wouldYouRatherSeededKey)
         guard !hasSeeded else { return }
         
-        seedQuestions()
-        UserDefaults.standard.set(true, forKey: seededKey)
+        // Check if category 6 already has questions
+        let request: NSFetchRequest<DefaultCategoryQuestionEntity> = DefaultCategoryQuestionEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "categoryId == %d", Int32(6))
+        request.fetchLimit = 1
+        
+        do {
+            let existingQuestions = try context.fetch(request)
+            if existingQuestions.isEmpty {
+                // Seed Would You Rather questions
+                for question in QuestionData.wouldYouRatherQuestions {
+                    let entity = DefaultCategoryQuestionEntity(context: context)
+                    entity.id = UUID()
+                    entity.categoryId = Int32(6)
+                    entity.question = question
+                    entity.createdAt = Date()
+                    entity.isGenerated = false
+                }
+                try context.save()
+                print("Successfully seeded Would You Rather category questions")
+            }
+            UserDefaults.standard.set(true, forKey: wouldYouRatherSeededKey)
+        } catch {
+            print("Failed to seed Would You Rather questions: \(error)")
+        }
     }
     
     private func seedQuestions() {
@@ -37,7 +71,8 @@ class DefaultCategoryService: ObservableObject {
             (2, QuestionData.friendQuestions),
             (3, QuestionData.icebreakerQuestions),
             (4, QuestionData.randomQuestions),
-            (5, QuestionData.controversialQuestions)
+            (5, QuestionData.controversialQuestions),
+            (6, QuestionData.wouldYouRatherQuestions)
         ]
         
         for (categoryId, questions) in categories {
@@ -75,6 +110,48 @@ class DefaultCategoryService: ObservableObject {
             return entities.compactMap { $0.question }
         } catch {
             print("Failed to load default category questions: \(error)")
+            return []
+        }
+    }
+    
+    // MARK: - Get Most Recent Generated Liked Question
+    
+    /// Returns the most recent generated question that was liked (not rejected) for the category
+    func getMostRecentGeneratedLikedQuestion(for categoryId: Int) -> String? {
+        let questions = getRecentLikedQuestions(for: categoryId, limit: 1)
+        return questions.first
+    }
+    
+    /// Returns up to the specified number of most recent generated questions that were liked (not rejected) for the category
+    func getRecentLikedQuestions(for categoryId: Int, limit: Int = 10) -> [String] {
+        let request: NSFetchRequest<DefaultCategoryQuestionEntity> = DefaultCategoryQuestionEntity.fetchRequest()
+        // Get generated questions that are not rejected, sorted by creation date descending
+        request.predicate = NSPredicate(format: "categoryId == %d AND isGenerated == YES AND (isRejected == NO OR isRejected == nil)", Int32(categoryId))
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \DefaultCategoryQuestionEntity.createdAt, ascending: false)]
+        request.fetchLimit = limit
+        
+        do {
+            let entities = try context.fetch(request)
+            return entities.compactMap { $0.question }
+        } catch {
+            print("Failed to get recent liked questions: \(error)")
+            return []
+        }
+    }
+    
+    /// Returns up to the specified number of most recent generated questions that were rejected for the category
+    func getRecentDislikedQuestions(for categoryId: Int, limit: Int = 10) -> [String] {
+        let request: NSFetchRequest<DefaultCategoryQuestionEntity> = DefaultCategoryQuestionEntity.fetchRequest()
+        // Get generated questions that were rejected, sorted by rejection date descending
+        request.predicate = NSPredicate(format: "categoryId == %d AND isGenerated == YES AND isRejected == YES", Int32(categoryId))
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \DefaultCategoryQuestionEntity.rejectedAt, ascending: false)]
+        request.fetchLimit = limit
+        
+        do {
+            let entities = try context.fetch(request)
+            return entities.compactMap { $0.question }
+        } catch {
+            print("Failed to get recent disliked questions: \(error)")
             return []
         }
     }

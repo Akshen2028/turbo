@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct Category: Identifiable, Equatable {
-    let id: Int       // 0...5 like old infoView.id, or -1 for custom categories
+    let id: Int       // 0...6 for default categories, or -1 for custom categories
     let name: String  // "Family", "Friends", etc.
     let imageName: String
     let isCustom: Bool
