@@ -193,10 +193,10 @@ struct QuestionView: View {
                         
                         // Button text
                         Text("Generate Question")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(.white)
                     }
-                    .frame(width: 180, height: 50)
+                    .frame(width: 220, height: 60)
                     .shadow(
                         color: Color(hue: glowHue.truncatingRemainder(dividingBy: 1.0), saturation: 1.0, brightness: 1.0).opacity(0.8),
                         radius: shadowRadius,
