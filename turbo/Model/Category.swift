@@ -25,5 +25,13 @@ struct Category: Identifiable, Equatable {
     static func == (lhs: Category, rhs: Category) -> Bool {
         lhs.id == rhs.id && lhs.isCustom == rhs.isCustom && lhs.customCategoryId == rhs.customCategoryId
     }
+    
+    /// Returns a random subtopic for this category
+    func getRandomSubtopic() -> String {
+        guard !isCustom, let subtopics = QuestionData.getSubtopics(for: id), !subtopics.isEmpty else {
+            return ""
+        }
+        return subtopics.randomElement() ?? ""
+    }
 }
 

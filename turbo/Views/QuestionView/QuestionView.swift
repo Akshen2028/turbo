@@ -545,10 +545,11 @@ struct QuestionView: View {
         
         Task {
             // Get prepared data from ViewModel
-            let (likedQuestions, dislikedQuestionsWithReasons, deckQuestions) = viewModel.prepareQuestionGenerationData()
+            let (subtopic, likedQuestions, dislikedQuestionsWithReasons, deckQuestions) = viewModel.prepareQuestionGenerationData()
             
             let question = await questionGenerationService.generateQuestion(
                 for: category.name,
+                subtopic: subtopic,
                 likedQuestions: likedQuestions,
                 dislikedQuestions: [],
                 dislikedQuestionsWithReasons: dislikedQuestionsWithReasons,

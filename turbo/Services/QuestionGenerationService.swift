@@ -55,14 +55,20 @@ class QuestionGenerationService: ObservableObject {
     /// Generates a question using OpenAI API
     /// - Parameters:
     ///   - categoryName: The name of the category
+    ///   - subtopic: Subtopic to focus the question on (empty string if none)
     ///   - likedQuestions: Up to 10 recently liked questions to understand user preferences
     ///   - dislikedQuestions: Up to 10 recently disliked questions to avoid similar content
     ///   - dislikedQuestionsWithReasons: Up to 10 recently disliked questions with their rejection reasons
     ///   - deckQuestions: Random questions from the current deck to improve randomness
     /// - Returns: A generated question string
-    func generateQuestion(for categoryName: String, likedQuestions: [String] = [], dislikedQuestions: [String] = [], dislikedQuestionsWithReasons: [(question: String, reason: String?)] = [], deckQuestions: [String] = []) async -> String {
+    func generateQuestion(for categoryName: String, subtopic: String = "", likedQuestions: [String] = [], dislikedQuestions: [String] = [], dislikedQuestionsWithReasons: [(question: String, reason: String?)] = [], deckQuestions: [String] = []) async -> String {
         // Build prompt with category context and user preferences
-        var prompt = "Give me a simple, concise conversation starting question in the \(categoryName) category. The question should be thought-provoking but easy to understand - keep it concise and direct, not overly complex unless the user has explicitly asked for a more complex question. It should spark meaningful conversation while being straightforward."
+        var prompt: String
+        if !subtopic.isEmpty {
+            prompt = "Give me a simple, concise conversation starting question in the \(categoryName) category, specifically focused on the subtopic of \(subtopic). The question should be thought-provoking but easy to understand - keep it concise and direct, not overly complex unless the user has explicitly asked for a more complex question. It should spark meaningful conversation while being straightforward."
+        } else {
+            prompt = "Give me a simple, concise conversation starting question in the \(categoryName) category. The question should be thought-provoking but easy to understand - keep it concise and direct, not overly complex unless the user has explicitly asked for a more complex question. It should spark meaningful conversation while being straightforward."
+        }
         
         // Check if user has marked at least 5 questions as "Too complex"
         let tooComplexCount = dislikedQuestionsWithReasons.filter { $0.reason == "Too complex" }.count
