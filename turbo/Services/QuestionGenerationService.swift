@@ -58,8 +58,9 @@ class QuestionGenerationService: ObservableObject {
     ///   - likedQuestions: Up to 10 recently liked questions to understand user preferences
     ///   - dislikedQuestions: Up to 10 recently disliked questions to avoid similar content
     ///   - dislikedQuestionsWithReasons: Up to 10 recently disliked questions with their rejection reasons
+    ///   - deckQuestions: Random questions from the current deck to improve randomness
     /// - Returns: A generated question string
-    func generateQuestion(for categoryName: String, likedQuestions: [String] = [], dislikedQuestions: [String] = [], dislikedQuestionsWithReasons: [(question: String, reason: String?)] = []) async -> String {
+    func generateQuestion(for categoryName: String, likedQuestions: [String] = [], dislikedQuestions: [String] = [], dislikedQuestionsWithReasons: [(question: String, reason: String?)] = [], deckQuestions: [String] = []) async -> String {
         // Build prompt with category context and user preferences
         var prompt = "Give me a simple, concise conversation starting question in the \(categoryName) category. The question should be thought-provoking but easy to understand - keep it concise and direct, not overly complex unless the user has explicitly asked for a more complex question. It should spark meaningful conversation while being straightforward."
         
@@ -78,7 +79,7 @@ class QuestionGenerationService: ObservableObject {
         // Include liked questions
         if !likedQuestions.isEmpty {
             let likedList = likedQuestions.prefix(10).map { "\"\($0)\"" }.joined(separator: ", ")
-            prompt += " Recently liked questions: \(likedList)"
+            prompt += "\n\nRecently liked questions: \(likedList)"
         }
         
         // Include disliked questions with their reasons
@@ -90,12 +91,23 @@ class QuestionGenerationService: ObservableObject {
                     return "\"\(item.question)\""
                 }
             }.joined(separator: ", ")
-            prompt += " Recently disliked questions: \(dislikedList)"
+            prompt += "\n\nRecently disliked questions: \(dislikedList)"
+        }
+        
+        // Include random deck questions and disliked questions to improve randomness
+        var existingQuestions = deckQuestions
+        // Also include disliked questions (without reasons) in the existing questions list
+        let dislikedQuestionsOnly = dislikedQuestionsWithReasons.map { $0.question }
+        existingQuestions.append(contentsOf: dislikedQuestionsOnly)
+        
+        if !existingQuestions.isEmpty {
+            let existingList = existingQuestions.shuffled().prefix(10).map { "\"\($0)\"" }.joined(separator: ", ")
+            prompt += "\n\nThese are some questions that already exist so make a nice random question that is not too similar to them: \(existingList)"
         }
         
         // Final instruction
-        if !likedQuestions.isEmpty || !dislikedQuestionsWithReasons.isEmpty {
-            prompt += " These are questions that the user has already generated before, so don't repeat them."
+        if !likedQuestions.isEmpty || !dislikedQuestionsWithReasons.isEmpty || !deckQuestions.isEmpty {
+            prompt += " These are questions that the user has already seen before, so don't repeat them."
         }
         
         do {

@@ -275,6 +275,40 @@ class QuestionViewModel: ObservableObject {
     
     // MARK: - Question Generation
     
+    /// Prepares data for question generation by randomly selecting liked/disliked questions
+    /// - Returns: Tuple containing liked questions, disliked questions with reasons, and deck questions
+    func prepareQuestionGenerationData() -> (likedQuestions: [String], dislikedQuestionsWithReasons: [(question: String, reason: String?)], deckQuestions: [String]) {
+        // Get ALL liked and disliked questions, then randomly select 10 of each
+        let allLikedQuestions: [String]
+        let allDislikedQuestionsWithReasons: [(question: String, reason: String?)]
+        
+        if category.isCustom, let customCategoryId = category.customCategoryId, let categoryService = categoryService {
+            allLikedQuestions = categoryService.getAllLikedQuestions(for: customCategoryId)
+            allDislikedQuestionsWithReasons = categoryService.getAllDislikedQuestionsWithReasons(for: customCategoryId)
+        } else if !category.isCustom, let defaultService = defaultCategoryService {
+            allLikedQuestions = defaultService.getAllLikedQuestions(for: category.id)
+            allDislikedQuestionsWithReasons = defaultService.getAllDislikedQuestionsWithReasons(for: category.id)
+        } else {
+            return ([], [], [])
+        }
+        
+        // Randomly select up to 10 liked questions
+        let likedQuestions = Array(allLikedQuestions.shuffled().prefix(10))
+        
+        // Randomly select up to 10 disliked questions with reasons
+        let dislikedQuestionsWithReasons = Array(allDislikedQuestionsWithReasons.shuffled().prefix(10))
+        
+        // Get 10 random questions from the current deck (excluding starter card)
+        let deckQuestions = cards
+            .filter { $0.q != "Swipe left for a question..." }
+            .map { $0.q }
+            .shuffled()
+            .prefix(10)
+            .map { $0 }
+        
+        return (likedQuestions, dislikedQuestionsWithReasons, Array(deckQuestions))
+    }
+    
     /// Inserts a new question card at the current position and moves to it
     /// - Parameter question: The question text to insert
     func insertQuestion(_ question: String) {

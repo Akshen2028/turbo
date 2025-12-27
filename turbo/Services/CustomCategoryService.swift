@@ -227,6 +227,56 @@ class CustomCategoryService: ObservableObject {
         }
     }
     
+    /// Returns ALL rejected questions with their reasons for the category (for random selection)
+    func getAllDislikedQuestionsWithReasons(for categoryId: UUID) -> [(question: String, reason: String?)] {
+        let categoryRequest: NSFetchRequest<CustomCategoryEntity> = CustomCategoryEntity.fetchRequest()
+        categoryRequest.predicate = NSPredicate(format: "id == %@", categoryId as CVarArg)
+        
+        do {
+            guard let categoryEntity = try context.fetch(categoryRequest).first else {
+                return []
+            }
+            
+            let request: NSFetchRequest<SavedQuestionEntity> = SavedQuestionEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "category == %@ AND isRejected == YES", categoryEntity)
+            
+            let questions = try context.fetch(request)
+            return questions.compactMap { entity in
+                guard let question = entity.value(forKey: "question") as? String else {
+                    return nil
+                }
+                let reason = entity.value(forKey: "rejectionReason") as? String
+                return (question: question, reason: reason)
+            }
+        } catch {
+            print("Failed to get all disliked questions with reasons: \(error)")
+            return []
+        }
+    }
+    
+    /// Returns ALL liked questions for the category (for random selection)
+    func getAllLikedQuestions(for categoryId: UUID) -> [String] {
+        let categoryRequest: NSFetchRequest<CustomCategoryEntity> = CustomCategoryEntity.fetchRequest()
+        categoryRequest.predicate = NSPredicate(format: "id == %@", categoryId as CVarArg)
+        
+        do {
+            guard let categoryEntity = try context.fetch(categoryRequest).first else {
+                return []
+            }
+            
+            let request: NSFetchRequest<SavedQuestionEntity> = SavedQuestionEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "category == %@ AND (isRejected == NO OR isRejected == nil)", categoryEntity)
+            
+            let questions = try context.fetch(request)
+            return questions.compactMap { entity in
+                entity.value(forKey: "question") as? String
+            }
+        } catch {
+            print("Failed to get all liked questions: \(error)")
+            return []
+        }
+    }
+    
     // MARK: - Save Question
     
     func saveQuestion(_ question: String, to categoryId: UUID) -> Bool {
@@ -270,7 +320,7 @@ class CustomCategoryService: ObservableObject {
     
     // MARK: - Reject Question
     
-    /// Marks a question as rejected and keeps only the 20 most recent rejected questions per category
+    /// Marks a question as rejected (keeps all rejected questions)
     func rejectQuestion(_ question: String, in categoryId: UUID, reason: String? = nil) {
         // Find the category
         let categoryRequest: NSFetchRequest<CustomCategoryEntity> = CustomCategoryEntity.fetchRequest()
@@ -301,20 +351,6 @@ class CustomCategoryService: ObservableObject {
                 questionEntity.setValue(Date(), forKey: "rejectedAt")
                 questionEntity.setValue(reason, forKey: "rejectionReason")
                 questionEntity.setValue(categoryEntity, forKey: "category")
-            }
-            
-            // Keep only the 20 most recent rejected questions for this category
-            let rejectedRequest: NSFetchRequest<SavedQuestionEntity> = SavedQuestionEntity.fetchRequest()
-            rejectedRequest.predicate = NSPredicate(format: "category == %@ AND isRejected == YES", categoryEntity)
-            rejectedRequest.sortDescriptors = [NSSortDescriptor(key: "rejectedAt", ascending: false)]
-            
-            let rejectedQuestions = try context.fetch(rejectedRequest)
-            if rejectedQuestions.count > 20 {
-                // Delete the oldest rejected questions beyond the 20 most recent
-                let questionsToDelete = Array(rejectedQuestions.dropFirst(20))
-                for questionEntity in questionsToDelete {
-                    context.delete(questionEntity)
-                }
             }
             
             try context.save()

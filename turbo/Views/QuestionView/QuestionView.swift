@@ -544,22 +544,16 @@ struct QuestionView: View {
         }
         
         Task {
-            // Get recent liked and disliked questions to tailor generation to user preferences
-            let likedQuestions: [String]
-            let dislikedQuestions: [String]
-            let dislikedQuestionsWithReasons: [(question: String, reason: String?)]
+            // Get prepared data from ViewModel
+            let (likedQuestions, dislikedQuestionsWithReasons, deckQuestions) = viewModel.prepareQuestionGenerationData()
             
-            if category.isCustom, let customCategoryId = category.customCategoryId {
-                likedQuestions = categoryService.getRecentLikedQuestions(for: customCategoryId, limit: 10)
-                dislikedQuestions = categoryService.getRecentDislikedQuestions(for: customCategoryId, limit: 10)
-                dislikedQuestionsWithReasons = categoryService.getRecentDislikedQuestionsWithReasons(for: customCategoryId, limit: 10)
-            } else {
-                likedQuestions = defaultCategoryService.getRecentLikedQuestions(for: category.id, limit: 10)
-                dislikedQuestions = defaultCategoryService.getRecentDislikedQuestions(for: category.id, limit: 10)
-                dislikedQuestionsWithReasons = defaultCategoryService.getRecentDislikedQuestionsWithReasons(for: category.id, limit: 10)
-            }
-            
-            let question = await questionGenerationService.generateQuestion(for: category.name, likedQuestions: likedQuestions, dislikedQuestions: dislikedQuestions, dislikedQuestionsWithReasons: dislikedQuestionsWithReasons)
+            let question = await questionGenerationService.generateQuestion(
+                for: category.name,
+                likedQuestions: likedQuestions,
+                dislikedQuestions: [],
+                dislikedQuestionsWithReasons: dislikedQuestionsWithReasons,
+                deckQuestions: deckQuestions
+            )
             
             await MainActor.run {
                 generatedQuestion = question

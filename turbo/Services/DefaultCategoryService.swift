@@ -176,6 +176,37 @@ class DefaultCategoryService: ObservableObject {
         }
     }
     
+    /// Returns ALL generated questions that were rejected with their reasons for the category (for random selection)
+    func getAllDislikedQuestionsWithReasons(for categoryId: Int) -> [(question: String, reason: String?)] {
+        let request: NSFetchRequest<DefaultCategoryQuestionEntity> = DefaultCategoryQuestionEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "categoryId == %d AND isGenerated == YES AND isRejected == YES", Int32(categoryId))
+        
+        do {
+            let entities = try context.fetch(request)
+            return entities.compactMap { entity in
+                guard let question = entity.question else { return nil }
+                return (question: question, reason: entity.rejectionReason)
+            }
+        } catch {
+            print("Failed to get all disliked questions with reasons: \(error)")
+            return []
+        }
+    }
+    
+    /// Returns ALL generated questions that were liked for the category (for random selection)
+    func getAllLikedQuestions(for categoryId: Int) -> [String] {
+        let request: NSFetchRequest<DefaultCategoryQuestionEntity> = DefaultCategoryQuestionEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "categoryId == %d AND isGenerated == YES AND (isRejected == NO OR isRejected == nil)", Int32(categoryId))
+        
+        do {
+            let entities = try context.fetch(request)
+            return entities.compactMap { $0.question }
+        } catch {
+            print("Failed to get all liked questions: \(error)")
+            return []
+        }
+    }
+    
     // MARK: - Add Generated Question
     
     func addGeneratedQuestion(_ question: String, to categoryId: Int) {
@@ -197,7 +228,7 @@ class DefaultCategoryService: ObservableObject {
     
     // MARK: - Reject Question
     
-    /// Marks a question as rejected and keeps only the 20 most recent rejected questions per category
+    /// Marks a question as rejected (keeps all rejected questions)
     func rejectQuestion(_ question: String, in categoryId: Int, reason: String? = nil) {
         // First, try to find existing question and mark it as rejected
         let request: NSFetchRequest<DefaultCategoryQuestionEntity> = DefaultCategoryQuestionEntity.fetchRequest()
@@ -221,20 +252,6 @@ class DefaultCategoryService: ObservableObject {
                 entity.isRejected = true
                 entity.rejectedAt = Date()
                 entity.rejectionReason = reason
-            }
-            
-            // Keep only the 20 most recent rejected questions for this category
-            let rejectedRequest: NSFetchRequest<DefaultCategoryQuestionEntity> = DefaultCategoryQuestionEntity.fetchRequest()
-            rejectedRequest.predicate = NSPredicate(format: "categoryId == %d AND isRejected == YES", Int32(categoryId))
-            rejectedRequest.sortDescriptors = [NSSortDescriptor(keyPath: \DefaultCategoryQuestionEntity.rejectedAt, ascending: false)]
-            
-            let rejectedEntities = try context.fetch(rejectedRequest)
-            if rejectedEntities.count > 20 {
-                // Delete the oldest rejected questions beyond the 20 most recent
-                let entitiesToDelete = Array(rejectedEntities.dropFirst(20))
-                for entity in entitiesToDelete {
-                    context.delete(entity)
-                }
             }
             
             try context.save()
