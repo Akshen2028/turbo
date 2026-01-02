@@ -85,7 +85,8 @@ class QuestionGenerationService: ObservableObject {
         // Include liked questions
         if !likedQuestions.isEmpty {
             let likedList = likedQuestions.prefix(10).map { "\"\($0)\"" }.joined(separator: ", ")
-            prompt += "\n\nRecently liked questions: \(likedList)"
+            prompt += "\n\nSome of user's liked questions: \(likedList)"
+            prompt += " Note: The user has liked these questions, so think of questions that match the vibe but do not repeat them."
         }
         
         // Include disliked questions with their reasons
@@ -97,7 +98,8 @@ class QuestionGenerationService: ObservableObject {
                     return "\"\(item.question)\""
                 }
             }.joined(separator: ", ")
-            prompt += "\n\nRecently disliked questions: \(dislikedList)"
+            prompt += "\n\nSome of user's disliked questions: \(dislikedList)"
+            prompt += " Note: The user has disliked these questions, so think of questions away from this vibe and do not repeat these questions."
         }
         
         // Include random deck questions and disliked questions to improve randomness

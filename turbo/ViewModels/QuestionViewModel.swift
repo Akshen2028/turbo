@@ -176,8 +176,8 @@ class QuestionViewModel: ObservableObject {
             Task { @MainActor in
                 swipedCount -= 1
                 // Reset all offsets immediately
-        for index in cards.indices {
-            cards[index].offset = 0
+                for index in cards.indices {
+                    cards[index].offset = 0
                 }
             }
         }
@@ -218,7 +218,7 @@ class QuestionViewModel: ObservableObject {
                 if value.translation.width < 0 {
                     // Swipe left - go to next
                     if swipedCount < cards.count - 1 {
-                swipedCount += 1
+                        swipedCount += 1
                     }
                 } else {
                     // Swipe right - go to previous
@@ -231,7 +231,7 @@ class QuestionViewModel: ObservableObject {
                     cards[i].offset = 0
                 }
             }
-            } else {
+        } else {
             // Snap back with quick animation
             withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
                 cards[index].offset = 0
@@ -261,13 +261,10 @@ class QuestionViewModel: ObservableObject {
     }
 
     func cardHeight(for index: Int) -> CGFloat {
-        // Old code always returned 400; the variable cardHeight
-        // only affected offset, not actual height.
         return 400
     }
 
     func cardOffset(for index: Int) -> CGFloat {
-        // Same logic as getCardOffset from old code but for single swipedCount
         return index - swipedCount <= 2
             ? CGFloat(index - swipedCount) * 30
             : 60
@@ -275,10 +272,42 @@ class QuestionViewModel: ObservableObject {
     
     // MARK: - Question Generation
     
-    /// Prepares data for question generation by randomly selecting liked/disliked questions
-    /// - Returns: Tuple containing subtopic, liked questions, disliked questions with reasons, and deck questions
-    func prepareQuestionGenerationData() -> (subtopic: String, likedQuestions: [String], dislikedQuestionsWithReasons: [(question: String, reason: String?)], deckQuestions: [String]) {
-        // Get ALL liked and disliked questions, then randomly select 10 of each
+    /// Returns a hybrid mix of (mostly) recent items + (some) random older items, capped to `maxCount`.
+    /// Note: This assumes the input list is in chronological order (older -> newer). If not, it still
+    /// behaves as a good diversity sampler.
+    private func hybridRecentAndRandom<T>(
+        _ items: [T],
+        maxCount: Int = 10,
+        recentCount: Int = 7,
+        randomOlderCount: Int = 3
+    ) -> [T] {
+        guard !items.isEmpty else { return [] }
+        if items.count <= maxCount {
+            return items.shuffled()
+        }
+        
+        let recentTake = min(recentCount, maxCount, items.count)
+        let recent = Array(items.suffix(recentTake))
+        
+        let older = Array(items.dropLast(recent.count))
+        let remainingSlots = max(0, maxCount - recent.count)
+        let randomTake = min(randomOlderCount, remainingSlots, older.count)
+        let randomOlder = Array(older.shuffled().prefix(randomTake))
+        
+        // Shuffle final selection so we don't imply priority or "recency" in ordering.
+        return (recent + randomOlder).shuffled()
+    }
+    
+    /// Prepares data for question generation by selecting a hybrid mix:
+    /// - Mostly recent liked/disliked items (to reflect current preferences)
+    /// - A smaller random sample from older history (to improve novelty)
+    /// - Plus a random slice of current deck questions (for additional variety)
+    func prepareQuestionGenerationData() -> (
+        subtopic: String,
+        likedQuestions: [String],
+        dislikedQuestionsWithReasons: [(question: String, reason: String?)],
+        deckQuestions: [String]
+    ) {
         let allLikedQuestions: [String]
         let allDislikedQuestionsWithReasons: [(question: String, reason: String?)]
         
@@ -292,14 +321,23 @@ class QuestionViewModel: ObservableObject {
             return ("", [], [], [])
         }
         
-        // Get random subtopic for default categories
+        // Random subtopic for default categories
         let subtopic = category.getRandomSubtopic()
         
-        // Randomly select up to 10 liked questions
-        let likedQuestions = Array(allLikedQuestions.shuffled().prefix(10))
+        // Hybrid selection: mostly recent + some random older (capped at 10)
+        let likedQuestions = hybridRecentAndRandom(
+            allLikedQuestions,
+            maxCount: 10,
+            recentCount: 7,
+            randomOlderCount: 3
+        )
         
-        // Randomly select up to 10 disliked questions with reasons
-        let dislikedQuestionsWithReasons = Array(allDislikedQuestionsWithReasons.shuffled().prefix(10))
+        let dislikedQuestionsWithReasons = hybridRecentAndRandom(
+            allDislikedQuestionsWithReasons,
+            maxCount: 10,
+            recentCount: 7,
+            randomOlderCount: 3
+        )
         
         // Get 10 random questions from the current deck (excluding starter card)
         let deckQuestions = cards
@@ -332,10 +370,8 @@ class QuestionViewModel: ObservableObject {
         
         // Save to Core Data
         if category.isCustom, let customCategoryId = category.customCategoryId, let categoryService = categoryService {
-            // Save to custom category
             _ = categoryService.saveQuestion(question, to: customCategoryId)
         } else if !category.isCustom, let defaultService = defaultCategoryService {
-            // Save to default category
             defaultService.addGeneratedQuestion(question, to: category.id)
         }
     }
@@ -343,10 +379,8 @@ class QuestionViewModel: ObservableObject {
     /// Removes the generated question if it was not liked
     /// - Parameter question: The question text to remove
     func removeGeneratedQuestion(_ question: String) {
-        // Find and remove the card with this question
         if let index = cards.firstIndex(where: { $0.q == question && $0.id != cards[0].id }) {
             cards.remove(at: index)
-            // Adjust swipedCount if we removed a card before the current position
             if index <= swipedCount {
                 swipedCount = max(0, swipedCount - 1)
             }
@@ -540,108 +574,93 @@ enum QuestionData {
     ]
     
     // Subtopics for each default category (100 unique subtopics per category)
-    // Empty for now - will be filled manually
     static let familySubtopics: [String] = [
-        "Birth Order Effects",
-        "Oldest Child Responsibilities",
-        "Middle Child Dynamics",
-        "Youngest Child Privileges",
-        "Only Child Experience",
-        "Parent-Child Role Reversal",
-        "Caregiver Roles",
-        "Family Authority Figures",
-        "Decision Makers in the Family",
-        "Emotional Anchors in the Family",
-        "Sibling Closeness",
-        "Sibling Distance",
-        "Parent-Child Emotional Closeness",
-        "Parent-Child Emotional Distance",
-        "Grandparent Relationships",
-        "Extended Family Bonds",
-        "Chosen Family",
-        "Family Loyalty",
-        "Family Dependency",
-        "Family Independence",
-        "Conflict Avoidance Patterns",
-        "Conflict Escalation Patterns",
-        "Silent Treatment Dynamics",
-        "Open Argument Culture",
-        "Emotional Expression Norms",
+        "Birth Order Influence",
+        "Role Expectations Growing Up",
         "Unspoken Family Rules",
-        "Topics That Are Never Discussed",
-        "Family Secrets",
-        "Family Apologies",
-        "Forgiveness in Families",
-        "Core Family Values",
-        "Religious Influence",
-        "Cultural Traditions",
-        "Political Differences",
-        "Moral Expectations",
-        "Reputation Consciousness",
-        "Success Definitions",
-        "Failure Responses",
-        "Risk Tolerance",
-        "Views on Independence",
-        "Discipline Styles",
-        "Praise vs Criticism",
-        "Emotional Safety as a Child",
-        "Fear-Based Parenting",
-        "Supportive Parenting",
-        "Academic Pressure",
-        "Freedom vs Control",
-        "Household Stability",
-        "Household Chaos",
-        "Childhood Responsibilities",
-        "Holiday Rituals",
-        "Birthday Rituals",
-        "Mealtime Rituals",
-        "Weekend Rituals",
-        "Travel Rituals",
-        "Celebration Styles",
-        "Grieving Rituals",
-        "Family Gatherings",
-        "Annual Traditions",
-        "Informal Rituals",
-        "Divorce Impact",
-        "Blended Family Dynamics",
-        "Loss of a Family Member",
-        "Immigration Experience",
-        "Moving Homes",
-        "Financial Ups and Downs",
-        "Illness in the Family",
-        "Caretaking Transitions",
-        "Generational Shifts",
-        "Changing Family Roles",
-        "Emotional Warmth",
-        "Emotional Distance",
-        "Conditional Love",
-        "Unconditional Support",
-        "Pressure to Conform",
-        "Pressure to Succeed",
-        "Emotional Safety Today",
-        "Emotional Triggers",
-        "Comfort Sources",
-        "Emotional Legacy",
-        "Communication Style Shaped by Family",
-        "Conflict Style Learned at Home",
+        "Emotional Tone of the Household",
+        "Who Held the Most Influence",
+        "How Decisions Were Made",
+        "Who Provided Emotional Stability",
+        "Sibling Dynamics Over Time",
+        "Parent-Child Trust",
+        "Grandparent Presence",
+        "Extended Family Closeness",
+        "Chosen Family Connections",
+        "Generational Value Gaps",
+        "Stories Passed Down",
+        "How Feelings Were Expressed",
+        "Feeling Safe at Home",
+        "How Support Was Shown",
+        "Comfort During Stress",
+        "Emotional Triggers from Childhood",
+        "Closeness That Changed Over Time",
+        "How Conflict Was Handled",
+        "Avoiding Difficult Conversations",
+        "Silence as Communication",
+        "Apologies in the Family",
+        "Forgiveness Practices",
+        "Unresolved Tensions",
+        "Off-Limit Topics",
+        "Core Family Beliefs",
+        "Spiritual or Religious Presence",
+        "Cultural Practices at Home",
+        "Political Differences in the Household",
+        "Moral Standards Growing Up",
+        "How Success Was Defined",
+        "How Failure Was Treated",
+        "Concern for Family Image",
+        "Discipline Methods Used",
+        "Feedback and Encouragement",
+        "Rules Around Freedom",
+        "Expectations Around School",
+        "Encouragement of Independence",
+        "Responsibilities as a Child",
+        "Holiday Experiences",
+        "Birthday Experiences",
+        "Mealtime Experiences",
+        "Daily or Weekly Family Habits",
+        "Travel Experiences Together",
+        "How Achievements Were Celebrated",
+        "How Loss Was Handled",
+        "Everyday Family Traditions",
+        "Impact of Family Separation",
+        "Adoption Experience",
+        "Experiencing Family Loss",
+        "Moving or Relocating Together",
+        "Financial Stability Growing Up",
+        "Illness in the Household",
+        "Caregiving Shifts",
+        "Life Events That Changed Everything",
+        "Communication Style Learned",
+        "Conflict Style Learned",
         "Relationship Patterns Learned",
-        "Money Attitudes Learned",
-        "Work Ethic Influence",
-        "Self-Worth Formation",
-        "Boundaries Learned",
-        "Trust Formation",
-        "Fear Patterns",
-        "Confidence Development",
-        "Family Stories Passed Down",
-        "Family Myths",
-        "Moments That Changed the Family",
+        "Money Mindset Learned",
+        "Work Ethic Learned",
+        "Sense of Self from Family",
+        "Learning Personal Boundaries",
+        "Learning to Trust Others",
+        "Confidence Development at Home",
+        "Family Myths or Narratives",
+        "Moments of Family Pride",
         "Family Regrets",
-        "Family Pride",
-        "Family Resilience",
-        "Family Expectations You Rejected",
-        "Family Lessons That Stayed",
-        "Family Lessons You Unlearned",
-        "What \"Family\" Means Now"
+        "Resilience During Hard Times",
+        "Expectations You Pushed Back On",
+        "Lessons That Stayed With You",
+        "Lessons You Had to Unlearn",
+        "How Family Love Was Shown",
+        "How Discipline Affected You",
+        "Feeling Understood at Home",
+        "Feeling Supported Growing Up",
+        "Pressure Felt from Family",
+        "Handling Change Together",
+        "Shared Responsibilities at Home",
+        "Boundaries with Relatives",
+        "Balancing Independence and Connection",
+        "Emotional Availability of Parents",
+        "Feeling Seen or Overlooked",
+        "How Family Shaped Your Identity",
+        "What Family Means to You Now"
     ]
 
     static let relationshipSubtopics: [String] = [
@@ -746,6 +765,7 @@ enum QuestionData {
         "Relationship Longevity",
         "Relationship Fulfillment"
     ]
+
     static let friendSubtopics: [String] = [
         "First Friendships",
         "Childhood Friends",
@@ -848,6 +868,7 @@ enum QuestionData {
         "Friends and Respect",
         "Friends Who Shaped You"
     ]
+
     static let icebreakerSubtopics: [String] = [
         "First Impressions",
         "Fun Facts",
@@ -950,6 +971,7 @@ enum QuestionData {
         "Social Warm-Ups",
         "Easy Conversation Starters"
     ]
+
     static let randomSubtopics: [String] = [
         "Unexpected Preferences",
         "Random Thoughts",
@@ -1052,6 +1074,7 @@ enum QuestionData {
         "Strange Preferences About Order",
         "Random Things That Stick With You"
     ]
+
     static let controversialSubtopics: [String] = [
         "Moral Gray Areas",
         "Ethical Dilemmas",
@@ -1154,80 +1177,80 @@ enum QuestionData {
         "Collective Guilt",
         "Individual Freedom Limits"
     ]
-    static let wouldYouRatherSubtopics: [String] = [
-    "Being Covered in Bugs",
-    "Sharing Space With Something Gross",
-    "Uncontrollable Smells",
-    "Sticky All Over",
-    "Slimy Textures",
-    "Rotten Food Exposure",
-    "Dirty Living Conditions",
-    "Public Bathroom Nightmares",
-    "Wearing Someone Else’s Clothes",
-    "Sleeping Somewhere Uncomfortable",
-    "Extreme Heat",
-    "Extreme Cold",
-    "Never Being Comfortable",
-    "Constant Itching",
-    "Persistent Minor Pain",
-    "Sleep Deprivation",
-    "Physical Exhaustion",
-    "Sensory Overload",
-    "Sensory Deprivation",
-    "Loud Noises You Can’t Escape",
-    "Complete Silence for Too Long",
-    "Awkward Silence With Others",
-    "Public Embarrassment",
-    "Private Embarrassment",
-    "Viral Humiliation",
-    "Being Laughed At",
-    "Being Judged",
-    "Being Misunderstood",
-    "Social Rejection",
-    "Forced Small Talk",
-    "Being Watched",
-    "Being Followed",
-    "Being Trapped",
-    "Losing Control",
-    "Uncertainty",
-    "Fear Without Knowing Why",
-    "Claustrophobic Spaces",
-    "Open Water Situations",
-    "Heights Without Safety",
-    "Darkness You Can’t Escape",
-    "Secrets Being Revealed",
-    "Forced Confessions",
-    "Lying Under Pressure",
-    "Breaking Trust",
-    "Guilt-Based Decisions",
-    "Moral Discomfort",
-    "Lose-Lose Choices",
-    "Unfair Rules",
-    "Absurd Punishments",
-    "Bizarre Laws",
-    "Endless Repetition",
-    "Doing the Same Task Forever",
-    "Time Loop Scenarios",
-    "Permanent Minor Inconvenience",
-    "One-Time Extreme Event",
-    "Slow-Building Chaos",
-    "Instant Life Chaos",
-    "Unpredictable Outcomes",
-    "Random Consequences",
-    "No Good Explanation",
-    "Stability vs Risk",
-    "Comfort vs Adventure",
-    "Freedom vs Security",
-    "Routine vs Chaos",
-    "Logic vs Emotion",
-    "Short-Term Pain vs Long-Term Pain",
-    "Privacy vs Attention",
-    "Safety vs Thrill",
-    "Control vs Uncertainty",
-    "Predictability vs Surprise"
-]
 
-    
+    static let wouldYouRatherSubtopics: [String] = [
+        "Being Covered in Bugs",
+        "Sharing Space With Something Gross",
+        "Uncontrollable Smells",
+        "Sticky All Over",
+        "Slimy Textures",
+        "Rotten Food Exposure",
+        "Dirty Living Conditions",
+        "Public Bathroom Nightmares",
+        "Wearing Someone Else’s Clothes",
+        "Sleeping Somewhere Uncomfortable",
+        "Extreme Heat",
+        "Extreme Cold",
+        "Never Being Comfortable",
+        "Constant Itching",
+        "Persistent Minor Pain",
+        "Sleep Deprivation",
+        "Physical Exhaustion",
+        "Sensory Overload",
+        "Sensory Deprivation",
+        "Loud Noises You Can’t Escape",
+        "Complete Silence for Too Long",
+        "Awkward Silence With Others",
+        "Public Embarrassment",
+        "Private Embarrassment",
+        "Viral Humiliation",
+        "Being Laughed At",
+        "Being Judged",
+        "Being Misunderstood",
+        "Social Rejection",
+        "Forced Small Talk",
+        "Being Watched",
+        "Being Followed",
+        "Being Trapped",
+        "Losing Control",
+        "Uncertainty",
+        "Fear Without Knowing Why",
+        "Claustrophobic Spaces",
+        "Open Water Situations",
+        "Heights Without Safety",
+        "Darkness You Can’t Escape",
+        "Secrets Being Revealed",
+        "Forced Confessions",
+        "Lying Under Pressure",
+        "Breaking Trust",
+        "Guilt-Based Decisions",
+        "Moral Discomfort",
+        "Lose-Lose Choices",
+        "Unfair Rules",
+        "Absurd Punishments",
+        "Bizarre Laws",
+        "Endless Repetition",
+        "Doing the Same Task Forever",
+        "Time Loop Scenarios",
+        "Permanent Minor Inconvenience",
+        "One-Time Extreme Event",
+        "Slow-Building Chaos",
+        "Instant Life Chaos",
+        "Unpredictable Outcomes",
+        "Random Consequences",
+        "No Good Explanation",
+        "Stability vs Risk",
+        "Comfort vs Adventure",
+        "Freedom vs Security",
+        "Routine vs Chaos",
+        "Logic vs Emotion",
+        "Short-Term Pain vs Long-Term Pain",
+        "Privacy vs Attention",
+        "Safety vs Thrill",
+        "Control vs Uncertainty",
+        "Predictability vs Surprise"
+    ]
+
     /// Returns the subtopics array for the given category ID
     static func getSubtopics(for categoryId: Int) -> [String]? {
         switch categoryId {
