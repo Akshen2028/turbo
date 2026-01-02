@@ -478,7 +478,7 @@ struct QuestionView: View {
         .navigationTitle(category.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if !isStarterCard && !showDislikeFeedback {
+            if !isStarterCard && !showDislikeFeedback && !showLikeDislike {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         showingSaveSheet = true
