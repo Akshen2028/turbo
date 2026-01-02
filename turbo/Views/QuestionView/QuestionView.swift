@@ -150,10 +150,11 @@ struct QuestionView: View {
                 }
                 .padding(.bottom, 30)
                 
-                // Generate Question button
-                Button(action: {
-                    generateQuestion()
-                }) {
+                // Generate Question button (only for default categories)
+                if !category.isCustom {
+                    Button(action: {
+                        generateQuestion()
+                    }) {
                     ZStack {
                         // Rainbow gradient background (matching app icon style with more blue)
                         RoundedRectangle(cornerRadius: 20)
@@ -218,6 +219,7 @@ struct QuestionView: View {
                 }
                 .disabled(isGenerating)
                 .opacity(isGenerating ? 0.6 : 1.0)
+                }
                 
                 Spacer()
                 Spacer()
