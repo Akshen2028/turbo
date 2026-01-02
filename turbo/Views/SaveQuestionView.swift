@@ -18,6 +18,7 @@ struct SaveQuestionView: View {
     
     // Track initial state to detect changes
     @State private var initialSavedCategoryIds: Set<UUID> = []
+    @State private var previousCategoryCount: Int = 0
     
     private func isQuestionAlreadySaved(in categoryId: UUID) -> Bool {
         let questionToCheck = frozenQuestion.isEmpty ? question : frozenQuestion
@@ -110,6 +111,28 @@ struct SaveQuestionView: View {
                         }
                     }
                     
+                    // Create Category button (always available)
+                    Button(action: {
+                        showingCreateCategory = true
+                    }) {
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                            Text("Create New Category")
+                        }
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Color(red: 55/255, green: 213/255, blue: 209/255))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.white)
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color(red: 55/255, green: 213/255, blue: 209/255), lineWidth: 2)
+                        )
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 10)
+                    
                     PrimaryActionButton("Save", isEnabled: hasChanges) {
                         // Use frozen question to ensure we're working with the original question
                         let questionToSave = frozenQuestion.isEmpty ? question : frozenQuestion
@@ -168,6 +191,22 @@ struct SaveQuestionView: View {
                 // Freeze the question and initialize selections when view appears
                 freezeQuestion()
                 initializeSelections()
+                previousCategoryCount = categoryService.customCategories.count
+            }
+            .onChange(of: categoryService.customCategories.count) { newCount in
+                // If a new category was added (count increased), select it automatically
+                if newCount > previousCategoryCount {
+                    let newCategories = categoryService.customCategories.filter { category in
+                        !initialSavedCategoryIds.contains(category.id)
+                    }
+                    // Select the most recently created category (first in the list since they're sorted by createdAt descending)
+                    if let newestCategory = newCategories.first {
+                        selectedCategoryIds.insert(newestCategory.id)
+                    }
+                    previousCategoryCount = newCount
+                } else {
+                    previousCategoryCount = newCount
+                }
             }
         }
     }
