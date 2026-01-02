@@ -416,9 +416,9 @@ struct QuestionView: View {
                             }) {
                                 Text("Cancel")
                                     .font(.system(size: 20, weight: .medium))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(Color(.systemGray5))
                                     .frame(width: 100, height: 50)
-                                    .background(Color.blue)
+                                    .background(Color(.systemGray))
                                     .cornerRadius(40)
                             }
                             .padding(.top, 10)
