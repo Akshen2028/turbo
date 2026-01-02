@@ -405,6 +405,21 @@ struct QuestionView: View {
                                     .cornerRadius(40)
                                     .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 4)
                             }
+                            
+                            // Cancel button
+                            Button(action: {
+                                withAnimation(.easeOut(duration: 0.2)) {
+                                    showDislikeFeedback = false
+                                }
+                            }) {
+                                Text("Cancel")
+                                    .font(.system(size: 20, weight: .medium))
+                                    .foregroundColor(.white)
+                                    .frame(width: 100, height: 50)
+                                    .background(Color.blue)
+                                    .cornerRadius(40)
+                            }
+                            .padding(.top, 10)
                         }
                         .padding(.horizontal, 40)
                     }
@@ -594,8 +609,8 @@ struct QuestionView: View {
         Task {
             try? await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
             await MainActor.run {
-                withAnimation(.easeOut(duration: 0.3)) {
-                    showLikeDislike = false
+        withAnimation(.easeOut(duration: 0.3)) {
+            showLikeDislike = false
                 }
             }
         }
