@@ -61,6 +61,12 @@ struct QuestionView: View {
         guard currentIndex < viewModel.cards.count else { return true }
         return viewModel.cards[currentIndex].q == "Swipe left for a question..."
     }
+    
+    private var isQuestionSaved: Bool {
+        let question = currentQuestion
+        guard !question.isEmpty && !isStarterCard else { return false }
+        return categoryService.questionExistsInAnyCategory(question)
+    }
 
     var body: some View {
         ZStack {
@@ -79,55 +85,59 @@ struct QuestionView: View {
                 // Card stack - use stable IDs to prevent view recreation
                 ZStack {
                     if !viewModel.cards.isEmpty {
-                        let currentIndex = viewModel.swipedCount
-                        let currentCardOffset = viewModel.cards[currentIndex].offset
+                        let currentIndex = min(viewModel.swipedCount, viewModel.cards.count - 1)
                         
-                        // Show preview card when swiping
-                        // Next card preview (when swiping left)
-                        if currentIndex + 1 < viewModel.cards.count && currentCardOffset < 0 {
-                            HStack {
-                                Spacer()
-                                CardView(card: viewModel.cards[currentIndex + 1], animation: animation)
-                                    .frame(width: viewModel.cardWidth(), height: viewModel.cardHeight(for: currentIndex + 1))
-                                Spacer(minLength: 0)
+                        // Only proceed if currentIndex is valid (should always be after min() above)
+                        if currentIndex >= 0 && currentIndex < viewModel.cards.count {
+                            let currentCardOffset = viewModel.cards[currentIndex].offset
+                            
+                            // Show preview card when swiping
+                            // Next card preview (when swiping left)
+                            if currentIndex + 1 < viewModel.cards.count && currentCardOffset < 0 {
+                                HStack {
+                                    Spacer()
+                                    CardView(card: viewModel.cards[currentIndex + 1], animation: animation)
+                                        .frame(width: viewModel.cardWidth(), height: viewModel.cardHeight(for: currentIndex + 1))
+                                    Spacer(minLength: 0)
+                                }
+                                .frame(height: 400)
+                                .zIndex(Double(viewModel.cards.count - currentIndex) - 0.5)
                             }
-                            .frame(height: 400)
-                            .zIndex(Double(viewModel.cards.count - currentIndex) - 0.5)
-                        }
-                        
-                        // Previous card preview (when swiping right)
-                        if currentIndex > 0 && currentCardOffset > 0 {
-                            HStack {
-                                Spacer()
-                                CardView(card: viewModel.cards[currentIndex - 1], animation: animation)
-                                    .frame(width: viewModel.cardWidth(), height: viewModel.cardHeight(for: currentIndex - 1))
-                                Spacer(minLength: 0)
+                            
+                            // Previous card preview (when swiping right)
+                            if currentIndex > 0 && currentCardOffset > 0 {
+                                HStack {
+                                    Spacer()
+                                    CardView(card: viewModel.cards[currentIndex - 1], animation: animation)
+                                        .frame(width: viewModel.cardWidth(), height: viewModel.cardHeight(for: currentIndex - 1))
+                                    Spacer(minLength: 0)
+                                }
+                                .frame(height: 400)
+                                .zIndex(Double(viewModel.cards.count - currentIndex) - 0.5)
                             }
-                            .frame(height: 400)
-                            .zIndex(Double(viewModel.cards.count - currentIndex) - 0.5)
-                        }
-                        
-                        // Use card IDs instead of indices for stable view identity
-                        ForEach((currentIndex...(viewModel.cards.count - 1)).reversed(), id: \.self) { index in
-                            let isTopCard = index == currentIndex
-                            HStack {
-                                Spacer()
-                                CardView(card: viewModel.cards[index], animation: animation)
-                                    .frame(width: viewModel.cardWidth(), height: viewModel.cardHeight(for: index))
-                                    .rotationEffect(.init(degrees: isTopCard ? viewModel.cardRotation(for: index) : 0))
-                                Spacer(minLength: 0)
+                            
+                            // Use card IDs instead of indices for stable view identity
+                            ForEach((currentIndex...(viewModel.cards.count - 1)).reversed(), id: \.self) { index in
+                                let isTopCard = index == currentIndex
+                                HStack {
+                                    Spacer()
+                                    CardView(card: viewModel.cards[index], animation: animation)
+                                        .frame(width: viewModel.cardWidth(), height: viewModel.cardHeight(for: index))
+                                        .rotationEffect(.init(degrees: isTopCard ? viewModel.cardRotation(for: index) : 0))
+                                    Spacer(minLength: 0)
+                                }
+                                .frame(height: 400)
+                                .contentShape(Rectangle())
+                                .offset(x: isTopCard ? viewModel.cards[index].offset : 0)
+                                .zIndex(isTopCard ? Double(viewModel.cards.count - currentIndex) : Double(viewModel.cards.count - index))
+                                .id("card-\(viewModel.cards[index].id)") // Stable ID based on card
+                                .gesture(isTopCard ? DragGesture(minimumDistance: 0)
+                                    .onChanged({ (value) in
+                                        viewModel.onChanged(value: value, index: index)
+                                    }).onEnded({ (value) in
+                                        viewModel.onEnd(value: value, index: index)
+                                    }) : nil)
                             }
-                            .frame(height: 400)
-                            .contentShape(Rectangle())
-                            .offset(x: isTopCard ? viewModel.cards[index].offset : 0)
-                            .zIndex(isTopCard ? Double(viewModel.cards.count - currentIndex) : Double(viewModel.cards.count - index))
-                            .id("card-\(viewModel.cards[index].id)") // Stable ID based on card
-                            .gesture(isTopCard ? DragGesture(minimumDistance: 0)
-                                .onChanged({ (value) in
-                                    viewModel.onChanged(value: value, index: index)
-                                }).onEnded({ (value) in
-                                    viewModel.onEnd(value: value, index: index)
-                                }) : nil)
                         }
                     }
                 }
@@ -485,7 +495,7 @@ struct QuestionView: View {
                     Button(action: {
                         showingSaveSheet = true
                     }) {
-                        Image(systemName: "bookmark")
+                        Image(systemName: isQuestionSaved ? "bookmark.fill" : "bookmark")
                             .foregroundColor(Color(red: 55/255, green: 213/255, blue: 209/255))
                     }
                 }
@@ -496,6 +506,13 @@ struct QuestionView: View {
                 question: currentQuestion,
                 isPresented: $showingSaveSheet
             )
+        }
+        .onChange(of: categoryService.customCategories) { _ in
+            // Force view update when categories change (e.g., after saving/unsaving)
+            // This ensures the bookmark icon updates correctly
+        }
+        .onChange(of: viewModel.swipedCount) { _ in
+            // Update bookmark icon when swiping to a different question
         }
     }
 

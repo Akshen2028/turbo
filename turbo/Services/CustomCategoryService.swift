@@ -137,6 +137,19 @@ class CustomCategoryService: ObservableObject {
         }
     }
     
+    /// Checks if a question exists in ANY custom category
+    func questionExistsInAnyCategory(_ question: String) -> Bool {
+        let checkRequest: NSFetchRequest<SavedQuestionEntity> = SavedQuestionEntity.fetchRequest()
+        
+        do {
+            let allSavedQuestions = try context.fetch(checkRequest)
+            return allSavedQuestions.contains(where: { ($0.value(forKey: "question") as? String) == question })
+        } catch {
+            print("Failed to check if question exists in any category: \(error)")
+            return false
+        }
+    }
+    
     // MARK: - Get Most Recent Generated Liked Question
     
     /// Returns the most recent generated question that was liked (not rejected) for the category

@@ -105,6 +105,10 @@ class QuestionViewModel: ObservableObject {
         withTransaction(transaction) {
             // Keep starter card at the bottom of the stack
             cards = [starter] + categoryCards
+            // Ensure swipedCount is within bounds after reloading cards
+            if swipedCount >= cards.count {
+                swipedCount = max(0, cards.count - 1)
+            }
         }
     }
     
