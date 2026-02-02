@@ -10,6 +10,11 @@ import SwiftUI
 // MARK: - Regular Category Card
 struct CategoryCard: View {
     let category: Category
+    @State private var showNewBadge: Bool = false
+    
+    private var isWouldYouRather: Bool {
+        category.id == 6 && category.name == "Would You Rather"
+    }
     
     var body: some View {
         ZStack(alignment: .leading) {
@@ -37,6 +42,41 @@ struct CategoryCard: View {
                     .cornerRadius(80.0)
                     .shadow(radius: 10)
                 Spacer()
+            }
+            
+            // NEW badge for Would You Rather category
+            if showNewBadge && isWouldYouRather {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Text("NEW")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        Color(red: 1.0, green: 0.6, blue: 0.2),   // Orange
+                                        Color(red: 1.0, green: 0.3, blue: 0.6)    // Pink
+                                    ]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(12)
+                            .shadow(radius: 4)
+                            .padding(.top, 10)
+                            .padding(.trailing, 30)
+                    }
+                    Spacer()
+                }
+            }
+        }
+        .onAppear {
+            if isWouldYouRather {
+                let hasInteracted = UserDefaults.standard.bool(forKey: "hasInteractedWithWouldYouRather")
+                showNewBadge = !hasInteracted
             }
         }
     }

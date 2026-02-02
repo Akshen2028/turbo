@@ -17,6 +17,7 @@ struct QuestionView: View {
     @EnvironmentObject var categoryService: CustomCategoryService
     @EnvironmentObject var defaultCategoryService: DefaultCategoryService
     @State private var showingSaveSheet = false
+    @State private var showGenerateQuestionNewBadge = false
     
     // Question generation state
     @StateObject private var questionGenerationService = QuestionGenerationService()
@@ -162,73 +163,104 @@ struct QuestionView: View {
                 
                 // Generate Question button (only for default categories)
                 if !category.isCustom {
-                    Button(action: {
-                        generateQuestion()
-                    }) {
-                    ZStack {
-                        // Rainbow gradient background (matching app icon style with more blue)
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color(red: 1.0, green: 0.9, blue: 0.2),   // Yellow
-                                        Color(red: 1.0, green: 0.6, blue: 0.2),   // Orange
-                                        Color(red: 1.0, green: 0.3, blue: 0.6),   // Pink
-                                        Color(red: 0.7, green: 0.2, blue: 0.8),   // Purple
-                                        Color(red: 0.4, green: 0.4, blue: 1.0),   // Blue-purple
-                                        Color(red: 0.2, green: 0.6, blue: 1.0),   // Bright blue
-                                        Color(red: 0.1, green: 0.7, blue: 1.0)    // Clear blue
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                        
-                        // Shimmer overlay
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(stops: [
-                                        .init(color: .clear, location: 0),
-                                        .init(color: .white.opacity(0.4), location: 0.5),
-                                        .init(color: .clear, location: 1)
-                                    ]),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .offset(x: shimmerOffset)
-                            .mask(
+                    ZStack(alignment: .topTrailing) {
+                        Button(action: {
+                            // Mark as interacted when button is clicked
+                            if showGenerateQuestionNewBadge {
+                                UserDefaults.standard.set(true, forKey: "hasInteractedWithGenerateQuestion")
+                                withAnimation {
+                                    showGenerateQuestionNewBadge = false
+                                }
+                            }
+                            generateQuestion()
+                        }) {
+                            ZStack {
+                                // Rainbow gradient background (matching app icon style with more blue)
                                 RoundedRectangle(cornerRadius: 20)
+                                    .fill(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [
+                                                Color(red: 1.0, green: 0.9, blue: 0.2),   // Yellow
+                                                Color(red: 1.0, green: 0.6, blue: 0.2),   // Orange
+                                                Color(red: 1.0, green: 0.3, blue: 0.6),   // Pink
+                                                Color(red: 0.7, green: 0.2, blue: 0.8),   // Purple
+                                                Color(red: 0.4, green: 0.4, blue: 1.0),   // Blue-purple
+                                                Color(red: 0.2, green: 0.6, blue: 1.0),   // Bright blue
+                                                Color(red: 0.1, green: 0.7, blue: 1.0)    // Clear blue
+                                            ]),
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                
+                                // Shimmer overlay
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(
+                                        LinearGradient(
+                                            gradient: Gradient(stops: [
+                                                .init(color: .clear, location: 0),
+                                                .init(color: .white.opacity(0.4), location: 0.5),
+                                                .init(color: .clear, location: 1)
+                                            ]),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .offset(x: shimmerOffset)
+                                    .mask(
+                                        RoundedRectangle(cornerRadius: 20)
+                                    )
+                                
+                                // Button text
+                                Text("Generate Question")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(.white)
+                            }
+                            .frame(width: 220, height: 60)
+                            .shadow(
+                                color: Color(hue: glowHue.truncatingRemainder(dividingBy: 1.0), saturation: 1.0, brightness: 1.0).opacity(0.8),
+                                radius: shadowRadius,
+                                x: 0,
+                                y: 0
                             )
+                            .shadow(
+                                color: Color(hue: (glowHue + 0.15).truncatingRemainder(dividingBy: 1.0), saturation: 1.0, brightness: 1.0).opacity(0.6),
+                                radius: shadowRadius * 1.3,
+                                x: 0,
+                                y: 0
+                            )
+                            .shadow(
+                                color: Color(hue: (glowHue + 0.3).truncatingRemainder(dividingBy: 1.0), saturation: 1.0, brightness: 1.0).opacity(0.4),
+                                radius: shadowRadius * 1.6,
+                                x: 0,
+                                y: 0
+                            )
+                        }
+                        .disabled(isGenerating)
+                        .opacity(isGenerating ? 0.6 : 1.0)
                         
-                        // Button text
-                        Text("Generate Question")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
+                        // NEW badge
+                        if showGenerateQuestionNewBadge {
+                            Text("NEW")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            Color(red: 1.0, green: 0.6, blue: 0.2),   // Orange
+                                            Color(red: 1.0, green: 0.3, blue: 0.6)    // Pink
+                                        ]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .cornerRadius(10)
+                                .shadow(radius: 3)
+                                .offset(x: 10, y: -10)
+                        }
                     }
-                    .frame(width: 220, height: 60)
-                    .shadow(
-                        color: Color(hue: glowHue.truncatingRemainder(dividingBy: 1.0), saturation: 1.0, brightness: 1.0).opacity(0.8),
-                        radius: shadowRadius,
-                        x: 0,
-                        y: 0
-                    )
-                    .shadow(
-                        color: Color(hue: (glowHue + 0.15).truncatingRemainder(dividingBy: 1.0), saturation: 1.0, brightness: 1.0).opacity(0.6),
-                        radius: shadowRadius * 1.3,
-                        x: 0,
-                        y: 0
-                    )
-                    .shadow(
-                        color: Color(hue: (glowHue + 0.3).truncatingRemainder(dividingBy: 1.0), saturation: 1.0, brightness: 1.0).opacity(0.4),
-                        radius: shadowRadius * 1.6,
-                        x: 0,
-                        y: 0
-                    )
-                }
-                .disabled(isGenerating)
-                .opacity(isGenerating ? 0.6 : 1.0)
                 }
                 
                 Spacer()
@@ -481,6 +513,14 @@ struct QuestionView: View {
             }
             // Start shimmer animation
             startShimmerAnimation()
+            // Check if Generate Question badge should show
+            if !category.isCustom {
+                showGenerateQuestionNewBadge = !UserDefaults.standard.bool(forKey: "hasInteractedWithGenerateQuestion")
+            }
+            // Mark Would You Rather category as interacted when viewed
+            if category.id == 6 && category.name == "Would You Rather" {
+                UserDefaults.standard.set(true, forKey: "hasInteractedWithWouldYouRather")
+            }
         }
         .onDisappear {
             // Clean up timer when view disappears
