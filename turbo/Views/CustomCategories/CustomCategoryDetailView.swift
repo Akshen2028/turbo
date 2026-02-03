@@ -14,6 +14,8 @@ struct CustomCategoryDetailView: View {
     @EnvironmentObject var categoryService: CustomCategoryService
     @Environment(\.dismiss) private var dismiss
     @State private var showingDeleteAlert = false
+    @State private var showingEditNameSheet = false
+    @State private var editedCategoryName = ""
     
     // Get the current category from the service to reflect real-time updates
     private var currentCategory: CustomCategory? {
@@ -64,13 +66,36 @@ struct CustomCategoryDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    showingDeleteAlert = true
-                }) {
-                    Image(systemName: "trash")
-                        .foregroundColor(.red)
+                HStack(spacing: 16) {
+                    Button(action: {
+                        if let currentCategory = currentCategory {
+                            editedCategoryName = currentCategory.name
+                            showingEditNameSheet = true
+                        } else {
+                            editedCategoryName = category.name
+                            showingEditNameSheet = true
+                        }
+                    }) {
+                        Image(systemName: "pencil")
+                            .foregroundColor(Color(red: 55/255, green: 213/255, blue: 209/255))
+                    }
+                    
+                    Button(action: {
+                        showingDeleteAlert = true
+                    }) {
+                        Image(systemName: "trash")
+                            .foregroundColor(.red)
+                    }
                 }
             }
+        }
+        .sheet(isPresented: $showingEditNameSheet) {
+            EditCategoryNameView(
+                category: currentCategory ?? category,
+                currentName: editedCategoryName,
+                isPresented: $showingEditNameSheet
+            )
+            .environmentObject(categoryService)
         }
         .alert("Delete Category", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }

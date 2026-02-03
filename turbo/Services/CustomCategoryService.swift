@@ -98,6 +98,28 @@ class CustomCategoryService: ObservableObject {
         }
     }
     
+    // MARK: - Update Category Name
+    
+    func updateCategoryName(_ category: CustomCategory, newName: String) -> Bool {
+        guard !newName.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
+        
+        let request: NSFetchRequest<CustomCategoryEntity> = CustomCategoryEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", category.id as CVarArg)
+        
+        do {
+            if let entity = try context.fetch(request).first {
+                entity.name = newName
+                try context.save()
+                loadCategories()
+                return true
+            }
+            return false
+        } catch {
+            print("Failed to update category name: \(error)")
+            return false
+        }
+    }
+    
     // MARK: - Delete Category
     
     func deleteCategory(_ category: CustomCategory) {
