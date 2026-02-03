@@ -50,10 +50,10 @@ struct CategoryCard: View {
                     HStack {
                         Spacer()
                         Text("NEW")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.white)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
                             .background(
                                 LinearGradient(
                                     gradient: Gradient(colors: [
@@ -64,7 +64,7 @@ struct CategoryCard: View {
                                     endPoint: .trailing
                                 )
                             )
-                            .cornerRadius(12)
+                            .cornerRadius(14)
                             .shadow(radius: 4)
                             .padding(.top, 10)
                             .padding(.trailing, 30)
