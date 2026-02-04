@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>OPENAI_API_KEY_TESTING</key>
+	<string>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</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
@@ -9,11 +15,5 @@
 		<key>UIImageName</key>
 		<string>1</string>
 	</dict>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>remote-notification</string>
-	</array>
-	<key>OPENAI_API_KEY_TESTING</key>
-	<string>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</string>
 </dict>
 </plist>
