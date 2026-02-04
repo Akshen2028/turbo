@@ -113,7 +113,7 @@ struct HomeView: View {
                 InfoNavButton()
                 HelpNavButton()
                 MailNavButton {
-                    mailVM.prepareForQuestion()
+                    mailVM.prepareForFeatureSuggestion()
                 }
             }
             Spacer().frame(height: 200)
