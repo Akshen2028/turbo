@@ -11,6 +11,7 @@ import CoreData
 
 struct HomeView: View {
     @StateObject private var mailVM = MailViewModel()
+    @StateObject private var updateChecker = AppStoreUpdateChecker()
     
     // MARK: - Background Animation State
     @State private var isAnimatingBackground = false
@@ -42,6 +43,22 @@ struct HomeView: View {
                 subject: mailVM.subject,
                 body: mailVM.body
             )
+        }
+        .alert("Update Available", isPresented: $updateChecker.showUpdateAlert) {
+            Button("Update") {
+                updateChecker.openAppStore()
+            }
+            Button("Later", role: .cancel) { }
+        } message: {
+            if let version = updateChecker.appStoreVersion {
+                Text("A new version (\(version)) is available. Please update to continue using Talkaholic.")
+            } else {
+                Text("A new version is available. Please update to continue using Talkaholic.")
+            }
+        }
+        .onAppear {
+            // Check for updates when app launches
+            updateChecker.checkForUpdates()
         }
         .accentColor(.black)
     }
